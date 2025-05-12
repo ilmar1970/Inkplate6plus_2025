@@ -7,17 +7,23 @@
 #define TOPIC_LOG "inkplate/log"
 #define TOPIC_ERROR "inkplate/last_error"
 #define TOPIC_IP "inkplate/ip"
-#define TOPIC_SUB "inkplate/control/#"
+#define TOPIC_SUB "inkplate/control/+/state"
+#define TOPIC_BOOSTER "inkplate/control/booster"
+#define TOPIC_CELL "inkplate/control/cell"
+#define TOPIC_STARLINK "inkplate/control/starlink"
+#define TOPIC_AUX1 "inkplate/control/aux1"
+#define TOPIC_AUX2 "inkplate/control/aux2"
+#define TOPIC_AUX3 "inkplate/control/aux3"
 
 
 Inkplate display(INKPLATE_1BIT);
 Display::Text title("SeaEsta", {400, 80}, 2);
-Display::Toggle wifi_toggle("WiFi Booster", "ether5", {100, 200});
-Display::Toggle cell_toggle("Cell", "ether4", {100, 400});
-Display::Toggle starlink_toggle("Starlink", "ether1", {100, 600});
-Display::Toggle aux1_toggle("AUX1", "AUX1", {600, 200});
-Display::Toggle aux2_toggle("AUX2", "AUX2", {600, 400});
-Display::Toggle aux3_toggle("AUX3", "AUX3", {600, 600});
+Display::Toggle wifi_toggle("WiFi Booster", TOPIC_BOOSTER, {100, 200});
+Display::Toggle cell_toggle("Cell", TOPIC_CELL, {100, 400});
+Display::Toggle starlink_toggle("Starlink", TOPIC_STARLINK, {100, 600});
+Display::Toggle aux1_toggle("AUX1", TOPIC_AUX1, {600, 200});
+Display::Toggle aux2_toggle("AUX2", TOPIC_AUX2, {600, 400});
+Display::Toggle aux3_toggle("AUX3", TOPIC_AUX3, {600, 600});
 
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -49,17 +55,17 @@ void callback(char* topic, byte* payload, unsigned int length) {
   String logEntry = "MQTT message on [" + String(topic) + "]: " + msg;
   log_mqtt(logEntry);
 
-  if (String(topic) == "inkplate/control/booster/state") {
+  if (String(topic) == TOPIC_BOOSTER "/state") {
     msg ? wifi_toggle.enable() : wifi_toggle.disable();
-  } else if (String(topic) == "inkplate/control/cell/state") {
+  } else if (String(topic) == TOPIC_CELL "/state") {
     msg ? cell_toggle.enable() : cell_toggle.disable();
-  } else if (String(topic) == "inkplate/control/starlink/state") {
+  } else if (String(topic) == TOPIC_STARLINK "/state") {
     msg ? starlink_toggle.enable() : starlink_toggle.disable();
-  } else if (String(topic) == "inkplate/control/aux1/state") {
+  } else if (String(topic) == TOPIC_AUX1 "/state") {
     msg ? aux1_toggle.enable() : aux1_toggle.disable();
-  } else if (String(topic) == "inkplate/control/aux2/state") {
+  } else if (String(topic) == TOPIC_AUX2 "/state") {
     msg ? aux2_toggle.enable() : aux2_toggle.disable();
-  } else if (String(topic) == "inkplate/control/aux3/state") {
+  } else if (String(topic) == TOPIC_AUX3 "/state") {
     msg ? aux3_toggle.enable() : aux3_toggle.disable();
   } 
 }
@@ -109,62 +115,25 @@ void drawNetPage(){
     display.display();
 }
 
+void setupToggleListener(Display::Toggle& toggle, const char* topic) {
+    toggle.onClickListener = [topic](Display::Toggle* t) {
+        if (t->state) {
+            t->disable();
+            client.publish(topic, "0");
+        } else {
+            t->enable();
+            client.publish(topic, "1");
+        }
+    };
+}
 
-void waitClick(){
-    wifi_toggle.onClickListener = [](Display::Toggle* toggle) { //tmp
-      if (toggle->state) {
-        toggle->disable();
-        client.publish("inkplate/control/wifi", "0");
-      } else {
-        toggle->enable();
-        client.publish("inkplate/control/wifi", "1");
-      }
-    };
-    cell_toggle.onClickListener = [](Display::Toggle* toggle) { //tmp
-      if (toggle->state) {
-        toggle->disable();
-        client.publish("inkplate/control/cell", "0");
-      } else {
-        toggle->enable();
-        client.publish("inkplate/control/cell", "1");
-      }
-    };
-    starlink_toggle.onClickListener = [](Display::Toggle* toggle) { //tmp
-      if (toggle->state) {
-        toggle->disable();
-        client.publish("inkplate/control/starlink", "0");
-      } else {
-        toggle->enable();
-        client.publish("inkplate/control/starlink", "1");
-      }
-    };
-    aux1_toggle.onClickListener = [](Display::Toggle* toggle) { //tmp
-      if (toggle->state) {
-        toggle->disable();
-        client.publish("inkplate/control/aux1", "0");
-      } else {
-        toggle->enable();
-        client.publish("inkplate/control/aux1", "1");
-      }
-    };
-    aux2_toggle.onClickListener = [](Display::Toggle* toggle) { //tmp
-      if (toggle->state) {
-        toggle->disable();
-        client.publish("inkplate/control/aux2", "0");
-      } else {
-        toggle->enable();
-        client.publish("inkplate/control/aux2", "1");
-      }
-    }; 
-    aux3_toggle.onClickListener = [](Display::Toggle* toggle) { //tmp
-      if (toggle->state) {
-        toggle->disable();
-        client.publish("inkplate/control/aux3", "0");
-      } else {
-        toggle->enable();
-        client.publish("inkplate/control/aux3", "1");
-      }
-    };  
+void waitClick() {
+    setupToggleListener(wifi_toggle, wifi_toggle.name);
+    setupToggleListener(cell_toggle, cell_toggle.name);
+    setupToggleListener(starlink_toggle, starlink_toggle.name);
+    setupToggleListener(aux1_toggle, aux1_toggle.name);
+    setupToggleListener(aux2_toggle, aux2_toggle.name);
+    setupToggleListener(aux3_toggle, aux3_toggle.name);
 }
 
 void setup() {
