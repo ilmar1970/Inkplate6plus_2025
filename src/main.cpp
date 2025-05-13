@@ -3,6 +3,7 @@
 #include "secrets.h"
 #include "Display.h"
 #include "air_ota.h"
+#include "Synctime.h"
 
 
 #define TOPIC_LOG "inkplate/log"
@@ -28,6 +29,7 @@ Display::Toggle aux3_toggle("AUX3", TOPIC_AUX3, {600, 600});
 
 WiFiClient espClient;
 PubSubClient client(espClient);
+Synctime synctime;
 
 void log_mqtt(const String& msg, bool error=false) {
   if (error) {
@@ -151,7 +153,10 @@ void setup() {
   client.setCallback(callback);
   //elegant_ota();
   initDisplay();
+  Synctime::display = &display;
+  synctime.setTime();
   drawNetPage();
+  synctime.getRtcDate();
   waitClick();
 
 }
@@ -169,4 +174,11 @@ void loop() {
   aux1_toggle.readCheckState();
   aux2_toggle.readCheckState();
   aux3_toggle.readCheckState();
+  if (display.rtcCheckAlarmFlag()) // update time every minute
+    {
+        Synctime::display = &display;
+        synctime.getRtcDate();
+        Serial.println("Update min");
+        //loop_counter++;
+    }
 }
