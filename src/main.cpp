@@ -1,8 +1,9 @@
 #include <WiFi.h>             // ESP32 / ESP8266 WiFi
 #include <PubSubClient.h>       // MQTT client
-//#include "air_ota.h"
 #include "secrets.h"
 #include "Display.h"
+#include "air_ota.h"
+
 
 #define TOPIC_LOG "inkplate/log"
 #define TOPIC_ERROR "inkplate/last_error"
@@ -144,11 +145,12 @@ void setup() {
   //elegant_ota();
   initDisplay();
   drawNetPage();
-  waitClick(); 
+  waitClick();
+
 }
 
 void loop() {
-  //ElegantOTA.loop();
+  ArduinoOTA.handle();
   
   if (!client.connected()) {
     reconnect();
