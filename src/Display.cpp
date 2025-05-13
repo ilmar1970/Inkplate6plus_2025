@@ -65,7 +65,7 @@ void Toggle::disable(bool is_partial) {
 
 void Display::Toggle::readCheckState(const OnClickListener<Toggle *>& customOnClickListener) {
     if(display->touchInArea(rectPosition.first, rectPosition.second, 85, 42)){
-        state ? disable() : enable();
+        //state ? disable() : enable();
         customOnClickListener == nullptr ? Toggle::onClickListener(this) : customOnClickListener(this);
     }
 }

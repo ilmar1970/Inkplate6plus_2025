@@ -53,21 +53,26 @@ void callback(char* topic, byte* payload, unsigned int length) {
   for (unsigned int i = 0; i < length; i++) {
     msg += (char)payload[i];
   }
-  String logEntry = "MQTT message on [" + String(topic) + "]: " + msg;
+  char logEntry[128]; // Adjust size as needed
+  snprintf(logEntry, sizeof(logEntry), "MQTT message on [%s]: %s", topic, msg.c_str());
   log_mqtt(logEntry);
 
+  msg.toLowerCase();
+  msg.trim();
+  bool state = (msg == "1" || msg == "true" || msg == "on");
+
   if (String(topic) == TOPIC_BOOSTER "/state") {
-    msg ? wifi_toggle.enable() : wifi_toggle.disable();
+    state ? wifi_toggle.enable() : wifi_toggle.disable();
   } else if (String(topic) == TOPIC_CELL "/state") {
-    msg ? cell_toggle.enable() : cell_toggle.disable();
+    state ? cell_toggle.enable() : cell_toggle.disable();
   } else if (String(topic) == TOPIC_STARLINK "/state") {
-    msg ? starlink_toggle.enable() : starlink_toggle.disable();
+    state ? starlink_toggle.enable() : starlink_toggle.disable();
   } else if (String(topic) == TOPIC_AUX1 "/state") {
-    msg ? aux1_toggle.enable() : aux1_toggle.disable();
+    state ? aux1_toggle.enable() : aux1_toggle.disable();
   } else if (String(topic) == TOPIC_AUX2 "/state") {
-    msg ? aux2_toggle.enable() : aux2_toggle.disable();
+    state ? aux2_toggle.enable() : aux2_toggle.disable();
   } else if (String(topic) == TOPIC_AUX3 "/state") {
-    msg ? aux3_toggle.enable() : aux3_toggle.disable();
+    state ? aux3_toggle.enable() : aux3_toggle.disable();
   } 
 }
 
@@ -119,10 +124,12 @@ void drawNetPage(){
 void setupToggleListener(Display::Toggle& toggle, const char* topic) {
     toggle.onClickListener = [topic](Display::Toggle* t) {
         if (t->state) {
-            t->disable();
+            // Disable redraw toggle, wait for <topic>/state to be received
+            //t->disable(); 
             client.publish(topic, "0");
         } else {
-            t->enable();
+            // Disable redraw toggle, wait for <topic>/state to be received
+            //t->enable();
             client.publish(topic, "1");
         }
     };
