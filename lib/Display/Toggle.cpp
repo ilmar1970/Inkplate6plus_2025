@@ -1,24 +1,5 @@
 #include "Display.h"
 
-Inkplate* Display::display = nullptr;
-
-using Display::Text;
-
-Text::Text(const char *text, DisplayCoordinates textPosition, int textSize, const GFXfont *font) {
-    this->text = text;
-    this->textPosition = textPosition;
-    this->textSize = textSize;
-    this->font = font;
-}
-
-void Text::draw() const {
-    display->setFont(font);
-    display->setTextColor(BLACK, WHITE);
-    display->setTextSize(textSize);
-    display->setCursor(textPosition.first, textPosition.second);
-    display->print(text);
-}
-
 using Display::Toggle;
 
 int16_t Toggle::circleRadius = 15;
@@ -39,11 +20,6 @@ Toggle::Toggle(
     this->state = state;
 }
 
-void Toggle::draw() {
-    Text::draw();
-    state ? enable(false) : disable(false);
-}
-
 void Toggle::enable(bool is_partial) {
     display->fillRoundRect(rectPosition.first, rectPosition.second, 85, 42, rectRadius, BLACK);
     display->fillCircle(circlePosition.first, circlePosition.second, circleRadius, WHITE);
@@ -55,7 +31,7 @@ void Toggle::enable(bool is_partial) {
 
 void Toggle::disable(bool is_partial) {
     display->fillRoundRect(rectPosition.first, rectPosition.second, 85, 42, rectRadius, WHITE);
-    display->drawRoundRect(rectPosition.first, rectPosition.second, 85, 42, rectRadius,BLACK);
+    display->drawRoundRect(rectPosition.first, rectPosition.second, 85, 42, rectRadius, BLACK);
     display->fillCircle(circlePosition.first - 45, circlePosition.second, circleRadius, BLACK);
     if (is_partial){
         display->partialUpdate();

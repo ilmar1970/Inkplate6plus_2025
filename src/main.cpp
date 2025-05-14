@@ -99,17 +99,17 @@ void reconnect() {
 }
 
 void initDisplay(){
-    display.setInkplatePowerMode(INKPLATE_USB_PWR_ONLY);
-    display.begin();
-    display.frontlight(true);
-    display.setFrontlight(3);
-    display.clearDisplay();
-    Display::display = &display;
-    if (display.tsInit(true)){
-        Serial.println("TS: success");
-    } else {
-        Serial.println("TS: fail");
-    }
+    // display.setInkplatePowerMode(INKPLATE_USB_PWR_ONLY);
+    // display.begin();
+    // display.frontlight(true);
+    // display.setFrontlight(3);
+    // display.clearDisplay();
+    // Display::display = &display;
+    // if (display.tsInit(true)){
+    //     Serial.println("TS: success");
+    // } else {
+    //     Serial.println("TS: fail");
+    // }
 }
 
 void drawNetPage(){

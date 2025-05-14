@@ -3,16 +3,22 @@
 
 #include <Arduino.h>
 #include <Inkplate.h>
-#include "Fonts/FreeSans18pt7b.h"
+#include "FreeSans18pt7b.h"
 
 using DisplayCoordinates = std::pair<int16_t, int16_t>;
 template<class T>
 using OnClickListener = std::function<void(T)>;
 
 namespace Display {
-    extern Inkplate* display;
+    class Drawable {
+        public:
+            Inkplate* display;
 
-    class Text {
+            virtual void draw() const;
+            virtual ~Drawable() {}
+    };
+
+    class Text : public Drawable {
         public:
             const char* text;
             DisplayCoordinates textPosition;
@@ -47,10 +53,51 @@ namespace Display {
                 const GFXfont* font=&FreeSans18pt7b,
                 bool state=false
             );
-            void draw();
+            using Text::draw;
             void readCheckState(const OnClickListener<Toggle*>& customOnClickListener = nullptr);
             void enable(bool is_partial=true);
             void disable(bool is_partial=true);
+    };
+
+    class Icon : public Drawable {
+        public:
+            const uint8_t* bitmap;
+            DisplayCoordinates iconPosition;
+            DisplayCoordinates iconSize;
+            
+            Icon(
+                const uint8_t* bitmap,
+                DisplayCoordinates iconPosition,
+                DisplayCoordinates iconSize
+            );
+            void draw() const;
+    };
+
+    class Bar : public Drawable {
+        public:
+            DisplayCoordinates barPosition;
+            DisplayCoordinates barSize;
+            // display.fillRect would likely fill everything. Need partial filling
+
+            static int16_t rectRadius;
+
+            Bar(
+                DisplayCoordinates barPosition,
+                DisplayCoordinates barSize
+            );
+            void draw() const;
+    };
+
+    class Page : public Drawable {
+        public:
+            Inkplate* display;
+            Drawable** objects;
+            int lastObjectIndex;
+
+            Page();
+            void attachObject(Drawable* object);
+            void draw() const;
+            ~Page();
     };
 }
 
