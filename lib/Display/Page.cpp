@@ -22,6 +22,7 @@ void Page::draw() const {
     for(int i = 0; i < lastObjectIndex; i++) {
         this->objects[i]->draw();
     }
+    display->display();
 }
 
 void Page::attachObject(Drawable* object) {
