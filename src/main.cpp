@@ -27,6 +27,7 @@ Display::Toggle aux1_toggle("AUX1", TOPIC_AUX1, {600, 200});
 Display::Toggle aux2_toggle("AUX2", TOPIC_AUX2, {600, 400});
 Display::Toggle aux3_toggle("AUX3", TOPIC_AUX3, {600, 600});
 
+
 WiFiClient espClient;
 PubSubClient client(espClient);
 Synctime synctime;
