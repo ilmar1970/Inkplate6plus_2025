@@ -15,7 +15,7 @@ void Synctime::setTime()
     {
         delay(500);
         Serial.print(".");
-        configTime(gmtOffset_sec, daylightOffset_sec, "pool.ntp.org", "time.nist.gov");
+        configTime(gmtOffset_sec, daylightOffset_sec, "192.168.23.1");
     }
     hour = timeinfo.tm_hour;
     minutes = timeinfo.tm_min;

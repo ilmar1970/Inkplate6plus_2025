@@ -3,10 +3,8 @@
 
 #include <ArduinoOTA.h>
 
-
 void air_ota(){
-ArduinoOTA
-
+    ArduinoOTA
     .onStart([]() {
       String type;
       if (ArduinoOTA.getCommand() == U_FLASH)
@@ -31,8 +29,7 @@ ArduinoOTA
       else if (error == OTA_RECEIVE_ERROR) Serial.println("Receive Failed");
       else if (error == OTA_END_ERROR) Serial.println("End Failed");
     });
-
-  ArduinoOTA.begin();
+    ArduinoOTA.begin();
   }
 
 #endif

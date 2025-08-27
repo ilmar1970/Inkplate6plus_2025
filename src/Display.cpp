@@ -23,7 +23,6 @@ using Display::Toggle;
 
 int16_t Toggle::circleRadius = 15;
 int16_t Toggle::rectRadius = 15;
-OnClickListener<Toggle*> Toggle::onClickListener = nullptr;
 
 Toggle::Toggle(
         const char* text,
@@ -63,9 +62,12 @@ void Toggle::disable(bool is_partial) {
     state = false;
 }
 
+
 void Display::Toggle::readCheckState(const OnClickListener<Toggle *>& customOnClickListener) {
-    if(display->touchInArea(rectPosition.first, rectPosition.second, 85, 42)){
-        //state ? disable() : enable();
-        customOnClickListener == nullptr ? Toggle::onClickListener(this) : customOnClickListener(this);
+    bool pressed = display->touchInArea(rectPosition.first, rectPosition.second, 85, 42);
+    if (pressed && !wasPressed) {
+        auto handler = (customOnClickListener ? customOnClickListener : this->onClickListener);
+        if (handler) handler(this);
     }
+    wasPressed = pressed;
 }

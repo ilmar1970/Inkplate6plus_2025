@@ -4,6 +4,7 @@
 #include <Arduino.h>
 #include <Inkplate.h>
 #include "Fonts/FreeSans18pt7b.h"
+#include <functional>
 
 using DisplayCoordinates = std::pair<int16_t, int16_t>;
 template<class T>
@@ -37,7 +38,9 @@ namespace Display {
 
             static int16_t circleRadius;
             static int16_t rectRadius;
-            static OnClickListener<Toggle*> onClickListener;
+            // static OnClickListener<Toggle*> onClickListener;
+            OnClickListener<Toggle*> onClickListener = nullptr;
+            bool wasPressed = false;
 
             Toggle(
                 const char* text,
