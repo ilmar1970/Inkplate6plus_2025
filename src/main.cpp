@@ -2,8 +2,9 @@
 #include <PubSubClient.h>       // MQTT client
 #include "secrets.h"
 #include "Display.h"
-//#include "air_ota.h"
-#include "Synctime.h"
+#include <Inkplate.h>          // Inkplate library
+#include "Wire.h"
+//#include "Synctime.h"
 
 
 #define TOPIC_LOG "inkplate/log"
@@ -13,14 +14,14 @@
 #define TOPIC_BOOSTER "inkplate/control/booster"
 #define TOPIC_CELL "inkplate/control/cell"
 #define TOPIC_STARLINK "inkplate/control/starlink"
-#define TOPIC_AUX1 "inkplate/control/ERlight"
-#define TOPIC_AUX2 "inkplate/control/ERfan"
+#define TOPIC_AUX1 "inkplate/control/batlight"
+#define TOPIC_AUX2 "inkplate/control/batfan"
 #define TOPIC_AUX3 "inkplate/control/aux3"
 //int loop_counter = 0;
 
 // --- Backlight control ---
 constexpr uint32_t BACKLIGHT_TIMEOUT_MS = 60000; // 60s (adjust as you like)
-constexpr uint8_t  FRONTLIGHT_ON_LEVEL  = 5;
+constexpr uint8_t  FRONTLIGHT_ON_LEVEL  = 4;
 constexpr uint8_t  FRONTLIGHT_OFF_LEVEL = 0;
 
 static uint32_t lastInteractionMs = 0;
@@ -29,16 +30,16 @@ static uint32_t wakeGuardUntilMs  = 0; // swallow touches right after wake
 
 Inkplate display(INKPLATE_1BIT);
 Display::Text title("SeaEsta", {400, 80}, 2);
-Display::Toggle wifi_toggle("WiFi Booster", TOPIC_BOOSTER, {100, 200});
+Display::Toggle wifi_toggle("Booster", TOPIC_BOOSTER, {100, 200});
 Display::Toggle cell_toggle("Cell", TOPIC_CELL, {100, 400});
 Display::Toggle starlink_toggle("Starlink", TOPIC_STARLINK, {100, 600});
-Display::Toggle aux1_toggle("ERlight", TOPIC_AUX1, {600, 200});
-Display::Toggle aux2_toggle("ERfan", TOPIC_AUX2, {600, 400});
+Display::Toggle aux1_toggle("BatLight", TOPIC_AUX1, {600, 200});
+Display::Toggle aux2_toggle("BatFan", TOPIC_AUX2, {600, 400});
 Display::Toggle aux3_toggle("AUX3", TOPIC_AUX3, {600, 600});
 
 WiFiClient espClient;
 PubSubClient client(espClient);
-Synctime synctime;
+//Synctime synctime;
 
 void log_mqtt(const String& msg, bool error=false) {
   if (error) {
@@ -47,29 +48,16 @@ void log_mqtt(const String& msg, bool error=false) {
   client.publish(TOPIC_LOG, msg.c_str());
 }
 
-// void setup_wifi() {
-//   log_mqtt("Connecting to WiFi");
-//   WiFi.mode(WIFI_STA);
-//   WiFi.begin(ssid, password);
-//   while (WiFi.status() != WL_CONNECTED) {
-//     delay(500);
-//   }
-//   log_mqtt("WiFi connected. IP address: " + WiFi.localIP().toString());
-// }
 
 void setup_wifi() {
-  log_mqtt("Connecting to WiFi");
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
-  const uint32_t start = millis();
-  while (WiFi.status() != WL_CONNECTED && millis() - start < 20000) {
-    delay(250);
+  Serial.print("Connecting to WiFi ..");
+  while (WiFi.status() != WL_CONNECTED) {
+    Serial.print('.');
+    delay(1000);
   }
-  if (WiFi.status() == WL_CONNECTED) {
-    log_mqtt("WiFi connected. IP address: " + WiFi.localIP().toString());
-  } else {
-    log_mqtt("WiFi connect timeout", /*error=*/true);
-  }
+  Serial.println(WiFi.localIP());
 }
 
 
@@ -120,20 +108,19 @@ void reconnect() {
 void initDisplay(){
     display.setInkplatePowerMode(INKPLATE_USB_PWR_ONLY);
     display.begin();
+    Display::display = &display;
+    delay(1000);
     display.clearDisplay();
     display.frontlight(true);
     display.setFrontlight(FRONTLIGHT_ON_LEVEL);
-    backlightOn = true;
-    lastInteractionMs = millis();   
-    display.display();
-    delay(3000);
-    Display::display = &display;
-    if (display.tsInit(true)){
-        Serial.println("TS: success");
-    } else {
-        Serial.println("TS: fail");
-    }
-}
+    Serial.println("TS init: ");
+    while (!display.tsInit(true)){
+      Serial.print('.');
+      delay(1000);
+    } 
+    Serial.println("TS init: ok");backlightOn = true;
+    lastInteractionMs = millis();
+  }    
 
 
 // Turn on frontlight on first tap; return true if we just woke
@@ -167,19 +154,14 @@ void setupToggleListener(Display::Toggle& toggle, const char* topic) {
     toggle.onClickListener = [topic](Display::Toggle* t) {
         // If we just woke the light, ignore this press
         if (millis() < wakeGuardUntilMs) return;
-
         lastInteractionMs = millis(); // real interaction happened
-
         // invert current UI state -> command payload
         const char* payload = t->state ? "0" : "1";
-
         // publish command (NOT retained)
         bool ok = client.publish(topic, payload, /*retain=*/false);
-
         // Optional: log command
         String s = String("CMD [") + topic + "] => " + payload + (ok ? "" : " (fail)");
         log_mqtt(s.c_str());
-
         // DO NOT change UI here. Wait for "<topic>/state" to arrive and set UI.
     };
 }
@@ -199,33 +181,41 @@ void setup() {
   initDisplay();
   setup_wifi();
   client.setServer(mqtt_server, mqtt_port);
+  client.setKeepAlive(60);
   client.setCallback(callback);
+  if (WiFi.status() == WL_CONNECTED) {
+    log_mqtt("WiFi connected. IP address: " + WiFi.localIP().toString());
+  }
   //air_ota();
   //Synctime::display = &display;
   //synctime.setTime();
   drawNetPage();
   //synctime.getRtcDate();
   waitClick();
-  display.display();
+  //display.display();
 }
 
 void loop() {
+  if (WiFi.status() != WL_CONNECTED) {
+      Serial.println("WiFi reconnect ...");
+      WiFi.reconnect();
+      delay(500);
+      return;
+  }
+  if (!client.connected()) {
+      reconnect();
+  }
   // Wake on any tap if light is off (and swallow that tap)
   if (wakeOnAnyTap()) {
       // Skip processing toggles this iteration to avoid accidental toggle on wake
       return;
   }
-
   // Auto turn off after inactivity
   if (backlightOn && (millis() - lastInteractionMs > BACKLIGHT_TIMEOUT_MS)) {
       display.setFrontlight(FRONTLIGHT_OFF_LEVEL);
       backlightOn = false;
   }
     //ArduinoOTA.handle();
-
-  if (!client.connected()) {
-    reconnect();
-  }
   client.loop();
   wifi_toggle.readCheckState();
   cell_toggle.readCheckState();
