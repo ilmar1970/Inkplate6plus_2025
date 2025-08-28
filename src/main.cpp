@@ -271,14 +271,14 @@ void loop() {
   }
   
   std::pair<DisplayCoordinates*, uint16_t> touchRecord = Display::readTouchData();
-  // if (touchRecord.second > 0) {
-  //   changePage();
-  // } else if (touchRecord.second == 0 && currentPage == PAGE_MAIN) {
-  //   wifi_toggle.readCheckState(touchRecord.first[0]);
-  //   cell_toggle.readCheckState(touchRecord.first[0]);
-  //   starlink_toggle.readCheckState(touchRecord.first[0]);
-  //   aux1_toggle.readCheckState(touchRecord.first[0]);
-  //   aux2_toggle.readCheckState(touchRecord.first[0]);
-  //   aux3_toggle.readCheckState(touchRecord.first[0]);
-  // }
+  if (touchRecord.second > 1) {
+    changePage();
+  } else if (touchRecord.second == 1 && currentPage == PAGE_MAIN) {
+    wifi_toggle.readCheckState(touchRecord.first[0]);
+    cell_toggle.readCheckState(touchRecord.first[0]);
+    starlink_toggle.readCheckState(touchRecord.first[0]);
+    aux1_toggle.readCheckState(touchRecord.first[0]);
+    aux2_toggle.readCheckState(touchRecord.first[0]);
+    aux3_toggle.readCheckState(touchRecord.first[0]);
+  }
 }

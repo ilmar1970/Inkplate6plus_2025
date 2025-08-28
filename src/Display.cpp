@@ -84,7 +84,6 @@ std::pair<DisplayCoordinates*, uint16_t> Display::readTouchData() {
     uint16_t x[2], y[2];
     if (display->tsAvailable()){
         n = display->tsGetData(x, y);
-        if (n != 0) { Serial.println(n); }
         for (int i = 0; i < n && i < 2; i++) {
             touchEvent = {x[i], y[i]};
         }
