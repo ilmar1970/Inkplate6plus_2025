@@ -80,14 +80,11 @@ void Display::Toggle::readCheckState(DisplayCoordinates touchCoordinates, const 
 
 std::pair<DisplayCoordinates*, int> Display::readTouchData() {
     static DisplayCoordinates touchEvent;
-    int lastFingerCount = 0;
     uint16_t x[2], y[2];
     int n = display->tsGetData(x, y);
-    if (n != lastFingerCount) {
-        lastFingerCount = n;
-        for (int i = 0; i < n && i < 2; i++) {
-            touchEvent = {x[i], y[i]};
-        }
+    if (n != 0) { Serial.println(n); }
+    for (int i = 0; i < n && i < 2; i++) {
+        touchEvent = {x[i], y[i]};
     }
     return {&touchEvent, n};
 }
