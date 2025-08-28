@@ -79,7 +79,7 @@ void Display::Toggle::readCheckState(DisplayCoordinates touchCoordinates, const 
 }
 
 std::pair<DisplayCoordinates*, int> Display::readTouchData() {
-    DisplayCoordinates touchEvent;
+    static DisplayCoordinates touchEvent;
     int lastFingerCount = 0;
     uint16_t x[2], y[2];
     int n = display->tsGetData(x, y);
