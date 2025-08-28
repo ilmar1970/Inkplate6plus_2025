@@ -271,9 +271,10 @@ void loop() {
   }
   
   std::pair<DisplayCoordinates*, int> touchRecord = Display::readTouchData();
-  if (touchRecord.second > 1) {
+  Serial.println(touchRecord.second);
+  if (touchRecord.second > 0) {
     changePage();
-  } else if (touchRecord.second == 1 && currentPage == PAGE_MAIN) {
+  } else if (touchRecord.second == 0 && currentPage == PAGE_MAIN) {
     wifi_toggle.readCheckState(touchRecord.first[0]);
     cell_toggle.readCheckState(touchRecord.first[0]);
     starlink_toggle.readCheckState(touchRecord.first[0]);
