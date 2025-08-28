@@ -4,8 +4,8 @@
 #include "Display.h"
 #include <Inkplate.h>          // Inkplate library
 #include "page2.h" 
-#include "Water_60x60.h" 
-#include "Diesel_60x60.h" 
+//#include "Water_60x60.h" 
+//#include "Diesel_60x60.h" 
 
 #define TOPIC_LOG "inkplate/log"
 #define TOPIC_ERROR "inkplate/last_error"
