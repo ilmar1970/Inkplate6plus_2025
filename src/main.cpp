@@ -4,8 +4,6 @@
 #include "Display.h"
 #include <Inkplate.h>          // Inkplate library
 #include "page2.h" 
-//#include "Water_60x60.h" 
-//#include "Diesel_60x60.h" 
 
 #define TOPIC_LOG "inkplate/log"
 #define TOPIC_ERROR "inkplate/last_error"
@@ -195,16 +193,15 @@ void setup() {
 
 void drawNextPage() {
     // Header
-    display.setFont(&FreeSansBold12pt7b);
+    display.setFont(&FreeSansBold24pt7b);
     display.setTextColor(BLACK, WHITE);   // 1-bit: BLACK on WHITE
     display.setTextSize(1);
     display.setCursor(420, 60);
-    display.print("PAGE 2");
 
     // Draw the two bitmaps in 1-bit mode
     // (If these arrays came from image2cpp as 1-bit, this Just Works)
-    display.drawBitmap(bitmap1_x, bitmap1_y, bitmap1_content, bitmap1_w, bitmap1_h, BLACK);
-    display.drawBitmap(bitmap0_x, bitmap0_y, bitmap0_content, bitmap0_w, bitmap0_h, BLACK);
+    display.drawBitmap(bitmap1_x, bitmap1_y, water, bitmap1_w, bitmap1_h, BLACK);
+    display.drawBitmap(bitmap0_x, bitmap0_y, diesel, bitmap0_w, bitmap0_h, BLACK);
 
     // Four panels (outlined rounded rectangles) in BLACK
     const int r = 8;
@@ -226,9 +223,9 @@ void drawNextPage() {
     display.setFont(text4_font);
     display.setCursor(text4_cursor_x, text4_cursor_y); display.print(text4_content);
 
-    // Page indicator: outline first dot, fill second
-    display.drawCircle(circle0_center_x, circle0_center_y, circle0_radius, BLACK);
-    display.fillCircle(circle1_center_x, circle1_center_y, circle1_radius, BLACK);
+    // // Page indicator: outline first dot, fill second
+    // display.drawCircle(circle0_center_x, circle0_center_y, circle0_radius, BLACK);
+    // display.fillCircle(circle1_center_x, circle1_center_y, circle1_radius, BLACK);
 
     // Commit to panel
     display.display();
@@ -238,7 +235,8 @@ void drawNextPage() {
 void showMainPage() { display.clearDisplay(); drawNetPage(); }
 
 
-void showPage2()    { display.clearDisplay(); drawNextPage(); } // already clears
+void showPage2()    { display.clearDisplay(); drawNextPage(); }
+
 
 void changePage(){
     lastInteractionMs = millis();   // count as activity
