@@ -29,7 +29,6 @@ static uint32_t wakeGuardUntilMs  = 0; // swallow touches right after wake
 //bool nextPage = false; // page number
 enum Page { PAGE_MAIN, PAGE_TWO };
 static Page currentPage = PAGE_MAIN;
-static bool pageDirty = true;
 
 Inkplate display(INKPLATE_1BIT);
 Display::Text title("SeaEsta", {400, 80}, 2);
@@ -236,19 +235,12 @@ void drawNextPage() {
 }
 
 
-void twoFingers(){
-    uint16_t n = 0;
-    if (display.tsAvailable()){
-        uint16_t x[2], y[2];
-        n = display.tsGetData(x, y);
-        Serial.println(n);
-    }
-    if (n > 1) {
-        lastInteractionMs = millis();   // count as activity
-        currentPage = (currentPage == PAGE_MAIN) ? PAGE_TWO : PAGE_MAIN;
-        pageDirty = true;
-        Serial.println("Two fingers - switch page");
-    }
+void changePage(){
+    lastInteractionMs = millis();   // count as activity
+    currentPage = (currentPage == PAGE_MAIN) ? PAGE_TWO : PAGE_MAIN;
+    Serial.println("Two fingers - switch page");
+    if (currentPage == PAGE_MAIN) showMainPage();
+    else                          showPage2();
 }
 
 
@@ -278,18 +270,16 @@ void loop() {
       display.setFrontlight(FRONTLIGHT_OFF_LEVEL);
       backlightOn = false;
   }
-  twoFingers();
-  if (pageDirty) {
-    if (currentPage == PAGE_MAIN) showMainPage();
-    else                          showPage2();
-    pageDirty = false;
-  }
-  if (currentPage == PAGE_MAIN){
-    wifi_toggle.readCheckState();
-    cell_toggle.readCheckState();
-    starlink_toggle.readCheckState();
-    aux1_toggle.readCheckState();
-    aux2_toggle.readCheckState();
-    aux3_toggle.readCheckState();
+  
+  std::pair<DisplayCoordinates*, int> touchRecord = Display::readTouchData();
+  if (touchRecord.second > 1) {
+    changePage();
+  } else if (touchRecord.second == 1 && currentPage == PAGE_MAIN) {
+    wifi_toggle.readCheckState(touchRecord.first[0]);
+    cell_toggle.readCheckState(touchRecord.first[0]);
+    starlink_toggle.readCheckState(touchRecord.first[0]);
+    aux1_toggle.readCheckState(touchRecord.first[0]);
+    aux2_toggle.readCheckState(touchRecord.first[0]);
+    aux3_toggle.readCheckState(touchRecord.first[0]);
   }
 }

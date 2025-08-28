@@ -63,11 +63,31 @@ void Toggle::disable(bool is_partial) {
 }
 
 
-void Display::Toggle::readCheckState(const OnClickListener<Toggle *>& customOnClickListener) {
-    bool pressed = display->touchInArea(rectPosition.first, rectPosition.second, 85, 42);
+void Display::Toggle::readCheckState(DisplayCoordinates touchCoordinates, const OnClickListener<Toggle *>& customOnClickListener) {
+    bool pressed = false;
+    int xbr = rectPosition.first + 85;
+    int ybr = rectPosition.second - 42;
+    if (touchCoordinates.first >= rectPosition.first && touchCoordinates.first <= xbr &&
+        touchCoordinates.second >= ybr && touchCoordinates.second <= rectPosition.second) {
+        pressed = true;
+    }
     if (pressed && !wasPressed) {
         auto handler = (customOnClickListener ? customOnClickListener : this->onClickListener);
         if (handler) handler(this);
     }
     wasPressed = pressed;
+}
+
+std::pair<DisplayCoordinates*, int> Display::readTouchData() {
+    DisplayCoordinates touchEvent;
+    int lastFingerCount = 0;
+    uint16_t x[2], y[2];
+    int n = display->tsGetData(x, y);
+    if (n != lastFingerCount) {
+        lastFingerCount = n;
+        for (int i = 0; i < n && i < 2; i++) {
+            touchEvent = {x[i], y[i]};
+        }
+    }
+    return {&touchEvent, n};
 }
