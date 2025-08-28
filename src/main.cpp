@@ -235,6 +235,11 @@ void drawNextPage() {
 }
 
 
+void showMainPage() { display.clearDisplay(); drawNetPage(); }
+
+
+void showPage2()    { display.clearDisplay(); drawNextPage(); } // already clears
+
 void changePage(){
     lastInteractionMs = millis();   // count as activity
     currentPage = (currentPage == PAGE_MAIN) ? PAGE_TWO : PAGE_MAIN;
@@ -242,12 +247,6 @@ void changePage(){
     if (currentPage == PAGE_MAIN) showMainPage();
     else                          showPage2();
 }
-
-
-void showMainPage() { display.clearDisplay(); drawNetPage(); }
-
-
-void showPage2()    { display.clearDisplay(); drawNextPage(); } // already clears
 
 
 void loop() {
