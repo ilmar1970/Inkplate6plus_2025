@@ -71,7 +71,7 @@ void Display::Toggle::readCheckState(DisplayCoordinates touchCoordinates, const 
                   touchCoordinates.first, touchCoordinates.second,
                   rectPosition.first, rectPosition.second, xbr, ybr);
     if (touchCoordinates.first >= rectPosition.first && touchCoordinates.first <= xbr &&
-        touchCoordinates.second >= ybr && touchCoordinates.second <= rectPosition.second) {
+        touchCoordinates.second <= ybr && touchCoordinates.second >= rectPosition.second) {
         pressed = true;
     }
     if (pressed && !wasPressed) {
