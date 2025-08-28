@@ -3,9 +3,9 @@
 #include "secrets.h"
 #include "Display.h"
 #include <Inkplate.h>          // Inkplate library
-#include "Wire.h"
-//#include "Synctime.h"
-
+#include "page2.h" 
+#include "Water_60x60.h" 
+#include "Diesel_60x60.h" 
 
 #define TOPIC_LOG "inkplate/log"
 #define TOPIC_ERROR "inkplate/last_error"
@@ -17,7 +17,6 @@
 #define TOPIC_AUX1 "inkplate/control/batlight"
 #define TOPIC_AUX2 "inkplate/control/batfan"
 #define TOPIC_AUX3 "inkplate/control/aux3"
-//int loop_counter = 0;
 
 // --- Backlight control ---
 constexpr uint32_t BACKLIGHT_TIMEOUT_MS = 60000; // 60s (adjust as you like)
@@ -27,6 +26,10 @@ constexpr uint8_t  FRONTLIGHT_OFF_LEVEL = 0;
 static uint32_t lastInteractionMs = 0;
 static bool     backlightOn       = true;
 static uint32_t wakeGuardUntilMs  = 0; // swallow touches right after wake
+//bool nextPage = false; // page number
+enum Page { PAGE_MAIN, PAGE_TWO };
+static Page currentPage = PAGE_MAIN;
+static bool pageDirty = true;
 
 Inkplate display(INKPLATE_1BIT);
 Display::Text title("SeaEsta", {400, 80}, 2);
@@ -39,7 +42,6 @@ Display::Toggle aux3_toggle("AUX3", TOPIC_AUX3, {600, 600});
 
 WiFiClient espClient;
 PubSubClient client(espClient);
-//Synctime synctime;
 
 void log_mqtt(const String& msg, bool error=false) {
   if (error) {
@@ -105,6 +107,7 @@ void reconnect() {
   }
 }
 
+
 void initDisplay(){
     display.setInkplatePowerMode(INKPLATE_USB_PWR_ONLY);
     display.begin();
@@ -121,7 +124,6 @@ void initDisplay(){
     Serial.println("TS init: ok");backlightOn = true;
     lastInteractionMs = millis();
   }    
-
 
 // Turn on frontlight on first tap; return true if we just woke
 inline bool wakeOnAnyTap() {
@@ -176,6 +178,7 @@ void waitClick() {
     setupToggleListener(aux3_toggle, aux3_toggle.name);
 }
 
+
 void setup() {
   Serial.begin(115200);
   initDisplay();
@@ -186,14 +189,74 @@ void setup() {
   if (WiFi.status() == WL_CONNECTED) {
     log_mqtt("WiFi connected. IP address: " + WiFi.localIP().toString());
   }
-  //air_ota();
-  //Synctime::display = &display;
-  //synctime.setTime();
   drawNetPage();
-  //synctime.getRtcDate();
   waitClick();
-  //display.display();
 }
+
+
+void drawNextPage() {
+    // Header
+    display.setFont(&FreeSansBold12pt7b);
+    display.setTextColor(BLACK, WHITE);   // 1-bit: BLACK on WHITE
+    display.setTextSize(1);
+    display.setCursor(420, 60);
+    display.print("PAGE 2");
+
+    // Draw the two bitmaps in 1-bit mode
+    // (If these arrays came from image2cpp as 1-bit, this Just Works)
+    display.drawBitmap(bitmap1_x, bitmap1_y, bitmap1_content, bitmap1_w, bitmap1_h, BLACK);
+    display.drawBitmap(bitmap0_x, bitmap0_y, bitmap0_content, bitmap0_w, bitmap0_h, BLACK);
+
+    // Four panels (outlined rounded rectangles) in BLACK
+    const int r = 8;
+    display.drawRoundRect(rect0_a_x, rect0_a_y, rect0_b_x - rect0_a_x, rect0_b_y - rect0_a_y, r, BLACK);
+    display.drawRoundRect(rect1_a_x, rect1_a_y, rect1_b_x - rect1_a_x, rect1_b_y - rect1_a_y, r, BLACK);
+    display.drawRoundRect(rect2_a_x, rect2_a_y, rect2_b_x - rect2_a_x, rect2_b_y - rect2_a_y, r, BLACK);
+    display.drawRoundRect(rect3_a_x, rect3_a_y, rect3_b_x - rect3_a_x, rect3_b_y - rect3_a_y, r, BLACK);
+
+    // Labels (all in BLACK)
+    display.setFont(text2_font);
+    display.setCursor(text2_cursor_x, text2_cursor_y); display.print(text2_content);
+
+    display.setFont(text5_font);
+    display.setCursor(text5_cursor_x, text5_cursor_y); display.print(text5_content);
+
+    display.setFont(text3_font);
+    display.setCursor(text3_cursor_x, text3_cursor_y); display.print(text3_content);
+
+    display.setFont(text4_font);
+    display.setCursor(text4_cursor_x, text4_cursor_y); display.print(text4_content);
+
+    // Page indicator: outline first dot, fill second
+    display.drawCircle(circle0_center_x, circle0_center_y, circle0_radius, BLACK);
+    display.fillCircle(circle1_center_x, circle1_center_y, circle1_radius, BLACK);
+
+    // Commit to panel
+    display.display();
+}
+
+
+void twoFingers(){
+    uint16_t n = 0;
+    if (display.tsAvailable()){
+        uint16_t x[2], y[2];
+        n = display.tsGetData(x, y);
+        Serial.println(n);
+    }
+    if (n > 1) {
+        lastInteractionMs = millis();   // count as activity
+        currentPage = (currentPage == PAGE_MAIN) ? PAGE_TWO : PAGE_MAIN;
+        pageDirty = true;
+        Serial.println("Two fingers - switch page");
+    }
+}
+
+
+void showMainPage() { display.clearDisplay(); drawNetPage(); }
+
+
+void showPage2()    { display.clearDisplay(); drawNextPage(); } // already clears
+
 
 void loop() {
   if (WiFi.status() != WL_CONNECTED) {
@@ -205,7 +268,7 @@ void loop() {
   if (!client.connected()) {
       reconnect();
   }
-  // Wake on any tap if light is off (and swallow that tap)
+  client.loop();
   if (wakeOnAnyTap()) {
       // Skip processing toggles this iteration to avoid accidental toggle on wake
       return;
@@ -215,19 +278,18 @@ void loop() {
       display.setFrontlight(FRONTLIGHT_OFF_LEVEL);
       backlightOn = false;
   }
-    //ArduinoOTA.handle();
-  client.loop();
-  wifi_toggle.readCheckState();
-  cell_toggle.readCheckState();
-  starlink_toggle.readCheckState();
-  aux1_toggle.readCheckState();
-  aux2_toggle.readCheckState();
-  aux3_toggle.readCheckState();
-  // if (display.rtcCheckAlarmFlag()) // update time every minute
-  //   {
-  //       Synctime::display = &display;
-  //       synctime.getRtcDate();
-  //       Serial.println("Update min");
-  //       loop_counter++;
-  //   }
+  twoFingers();
+  if (pageDirty) {
+    if (currentPage == PAGE_MAIN) showMainPage();
+    else                          showPage2();
+    pageDirty = false;
+  }
+  if (currentPage == PAGE_MAIN){
+    wifi_toggle.readCheckState();
+    cell_toggle.readCheckState();
+    starlink_toggle.readCheckState();
+    aux1_toggle.readCheckState();
+    aux2_toggle.readCheckState();
+    aux3_toggle.readCheckState();
+  }
 }
