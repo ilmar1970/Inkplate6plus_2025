@@ -66,7 +66,7 @@ void Toggle::disable(bool is_partial) {
 void Display::Toggle::readCheckState(DisplayCoordinates touchCoordinates, const OnClickListener<Toggle *>& customOnClickListener) {
     bool pressed = false;
     int xbr = rectPosition.first + 85;
-    int ybr = rectPosition.second - 42;
+    int ybr = rectPosition.second + 42;
     Serial.printf("Touch at (%d,%d); Rect at (%d,%d)-(%d,%d)\n",
                   touchCoordinates.first, touchCoordinates.second,
                   rectPosition.first, rectPosition.second, xbr, ybr);
