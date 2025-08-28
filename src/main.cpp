@@ -270,7 +270,7 @@ void loop() {
       backlightOn = false;
   }
   
-  std::pair<DisplayCoordinates*, int> touchRecord = Display::readTouchData();
+  std::pair<DisplayCoordinates*, uint16_t> touchRecord = Display::readTouchData();
   // if (touchRecord.second > 0) {
   //   changePage();
   // } else if (touchRecord.second == 0 && currentPage == PAGE_MAIN) {

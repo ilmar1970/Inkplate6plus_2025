@@ -78,7 +78,7 @@ void Display::Toggle::readCheckState(DisplayCoordinates touchCoordinates, const 
     wasPressed = pressed;
 }
 
-std::pair<DisplayCoordinates*, int> Display::readTouchData() {
+std::pair<DisplayCoordinates*, uint16_t> Display::readTouchData() {
     static DisplayCoordinates touchEvent;
     uint16_t n = 0;
     uint16_t x[2], y[2];

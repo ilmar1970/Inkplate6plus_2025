@@ -13,7 +13,7 @@ using OnClickListener = std::function<void(T)>;
 namespace Display {
     extern Inkplate* display;
 
-    std::pair<DisplayCoordinates*, int> readTouchData();
+    std::pair<DisplayCoordinates*, uint16_t> readTouchData();
 
     class Text {
         public:
