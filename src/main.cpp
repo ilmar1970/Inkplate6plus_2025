@@ -271,7 +271,7 @@ void loop() {
   }
   
   std::pair<DisplayCoordinates*, int> touchRecord = Display::readTouchData();
-  Serial.println(touchRecord.second);
+  if (touchRecord.second != 0) { Serial.println(touchRecord.second); }
   if (touchRecord.second > 0) {
     changePage();
   } else if (touchRecord.second == 0 && currentPage == PAGE_MAIN) {
