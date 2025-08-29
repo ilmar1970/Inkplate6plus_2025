@@ -4,8 +4,6 @@
 #include "Display.h"
 #include <Inkplate.h>          // Inkplate library
 #include "page2.h" 
-#include "Water_60x60.h" 
-#include "Diesel_60x60.h" 
 
 #define TOPIC_LOG "inkplate/log"
 #define TOPIC_ERROR "inkplate/last_error"
@@ -29,7 +27,6 @@ static uint32_t wakeGuardUntilMs  = 0; // swallow touches right after wake
 //bool nextPage = false; // page number
 enum Page { PAGE_MAIN, PAGE_TWO };
 static Page currentPage = PAGE_MAIN;
-static bool pageDirty = true;
 
 Inkplate display(INKPLATE_1BIT);
 Display::Text title("SeaEsta", {400, 80}, 2);
@@ -196,16 +193,15 @@ void setup() {
 
 void drawNextPage() {
     // Header
-    display.setFont(&FreeSansBold12pt7b);
+    display.setFont(&FreeSansBold24pt7b);
     display.setTextColor(BLACK, WHITE);   // 1-bit: BLACK on WHITE
     display.setTextSize(1);
     display.setCursor(420, 60);
-    display.print("PAGE 2");
 
     // Draw the two bitmaps in 1-bit mode
     // (If these arrays came from image2cpp as 1-bit, this Just Works)
-    display.drawBitmap(bitmap1_x, bitmap1_y, bitmap1_content, bitmap1_w, bitmap1_h, BLACK);
-    display.drawBitmap(bitmap0_x, bitmap0_y, bitmap0_content, bitmap0_w, bitmap0_h, BLACK);
+    display.drawBitmap(bitmap1_x, bitmap1_y, water, bitmap1_w, bitmap1_h, BLACK);
+    display.drawBitmap(bitmap0_x, bitmap0_y, diesel, bitmap0_w, bitmap0_h, BLACK);
 
     // Four panels (outlined rounded rectangles) in BLACK
     const int r = 8;
@@ -227,35 +223,28 @@ void drawNextPage() {
     display.setFont(text4_font);
     display.setCursor(text4_cursor_x, text4_cursor_y); display.print(text4_content);
 
-    // Page indicator: outline first dot, fill second
-    display.drawCircle(circle0_center_x, circle0_center_y, circle0_radius, BLACK);
-    display.fillCircle(circle1_center_x, circle1_center_y, circle1_radius, BLACK);
+    // // Page indicator: outline first dot, fill second
+    // display.drawCircle(circle0_center_x, circle0_center_y, circle0_radius, BLACK);
+    // display.fillCircle(circle1_center_x, circle1_center_y, circle1_radius, BLACK);
 
     // Commit to panel
     display.display();
 }
 
 
-void twoFingers(){
-    uint16_t n = 0;
-    if (display.tsAvailable()){
-        uint16_t x[2], y[2];
-        n = display.tsGetData(x, y);
-        Serial.println(n);
-    }
-    if (n > 1) {
-        lastInteractionMs = millis();   // count as activity
-        currentPage = (currentPage == PAGE_MAIN) ? PAGE_TWO : PAGE_MAIN;
-        pageDirty = true;
-        Serial.println("Two fingers - switch page");
-    }
-}
-
-
 void showMainPage() { display.clearDisplay(); drawNetPage(); }
 
 
-void showPage2()    { display.clearDisplay(); drawNextPage(); } // already clears
+void showPage2()    { display.clearDisplay(); drawNextPage(); }
+
+
+void changePage(){
+    lastInteractionMs = millis();   // count as activity
+    currentPage = (currentPage == PAGE_MAIN) ? PAGE_TWO : PAGE_MAIN;
+    Serial.println("Two fingers - switch page");
+    if (currentPage == PAGE_MAIN) showMainPage();
+    else                          showPage2();
+}
 
 
 void loop() {
@@ -278,18 +267,16 @@ void loop() {
       display.setFrontlight(FRONTLIGHT_OFF_LEVEL);
       backlightOn = false;
   }
-  twoFingers();
-  if (pageDirty) {
-    if (currentPage == PAGE_MAIN) showMainPage();
-    else                          showPage2();
-    pageDirty = false;
-  }
-  if (currentPage == PAGE_MAIN){
-    wifi_toggle.readCheckState();
-    cell_toggle.readCheckState();
-    starlink_toggle.readCheckState();
-    aux1_toggle.readCheckState();
-    aux2_toggle.readCheckState();
-    aux3_toggle.readCheckState();
+  
+  std::pair<DisplayCoordinates*, uint16_t> touchRecord = Display::readTouchData();
+  if (touchRecord.second > 1) {
+    changePage();
+  } else if (touchRecord.second == 1 && currentPage == PAGE_MAIN) {
+    wifi_toggle.readCheckState(touchRecord.first[0]);
+    cell_toggle.readCheckState(touchRecord.first[0]);
+    starlink_toggle.readCheckState(touchRecord.first[0]);
+    aux1_toggle.readCheckState(touchRecord.first[0]);
+    aux2_toggle.readCheckState(touchRecord.first[0]);
+    aux3_toggle.readCheckState(touchRecord.first[0]);
   }
 }

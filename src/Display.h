@@ -13,6 +13,8 @@ using OnClickListener = std::function<void(T)>;
 namespace Display {
     extern Inkplate* display;
 
+    std::pair<DisplayCoordinates*, uint16_t> readTouchData();
+
     class Text {
         public:
             const char* text;
@@ -51,7 +53,7 @@ namespace Display {
                 bool state=false
             );
             void draw();
-            void readCheckState(const OnClickListener<Toggle*>& customOnClickListener = nullptr);
+            void readCheckState(DisplayCoordinates touchCoordinates, const OnClickListener<Toggle*>& customOnClickListener = nullptr);
             void enable(bool is_partial=true);
             void disable(bool is_partial=true);
     };
