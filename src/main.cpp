@@ -17,6 +17,8 @@
 #define TOPIC_AUX1 "inkplate/control/batlight"
 #define TOPIC_AUX2 "inkplate/control/batfan"
 #define TOPIC_AUX3 "inkplate/control/aux3"
+#define TOPIC_TANK "tanks/#"
+
 
 // --- Backlight control ---
 constexpr uint32_t BACKLIGHT_TIMEOUT_MS = 60000; // 60s (adjust as you like)
@@ -80,6 +82,10 @@ void callback(char* topic, byte* payload, unsigned int length) {
   else if (t == String(TOPIC_AUX1) + "/state")     { on ? aux1_toggle.enable()     : aux1_toggle.disable(); }
   else if (t == String(TOPIC_AUX2) + "/state")     { on ? aux2_toggle.enable()     : aux2_toggle.disable(); }
   else if (t == String(TOPIC_AUX3) + "/state")     { on ? aux3_toggle.enable()     : aux3_toggle.disable(); }
+  else if (t == String(TOPIC_TANK) + "/fuelPort")     { Serial.println("fuelPort Level: " + msg); }
+  else if (t == String(TOPIC_TANK) + "/fuelStb")     { Serial1.println("fuelStb Level: " + msg); }
+  else if (t == String(TOPIC_TANK) + "/waterPort")     { Serial.println("waterPort Level: " + msg); }
+  else if (t == String(TOPIC_TANK) + "/waterStb")     { Serial.println("waterStb Level: " + msg); }
 
   // Optional: small log
   char logEntry[128];
@@ -94,6 +100,7 @@ void reconnect() {
     if (client.connect(client_id, mqtt_user, mqtt_pass)) {
       Serial.println("connected");
       client.subscribe(TOPIC_SUB);
+      client.subscribe(TOPIC_TANK);
       IPAddress ip = WiFi.localIP();
       String ipStr = ip.toString();
       client.publish(TOPIC_IP, ipStr.c_str());
