@@ -68,8 +68,8 @@ void Display::Toggle::readCheckState(DisplayCoordinates touchCoordinates, const 
     int xbr = rectPosition.first + 85;
     int ybr = rectPosition.second + 42;
     //Serial.printf("Touch at (%d,%d); Rect at (%d,%d)-(%d,%d)\n",
-                  touchCoordinates.first, touchCoordinates.second,
-                  rectPosition.first, rectPosition.second, xbr, ybr);
+    //              touchCoordinates.first, touchCoordinates.second,
+    //              rectPosition.first, rectPosition.second, xbr, ybr);
     if (touchCoordinates.first >= rectPosition.first && touchCoordinates.first <= xbr &&
         touchCoordinates.second <= ybr && touchCoordinates.second >= rectPosition.second) {
         pressed = true;

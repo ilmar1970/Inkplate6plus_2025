@@ -29,6 +29,10 @@ static uint32_t wakeGuardUntilMs  = 0; // swallow touches right after wake
 //bool nextPage = false; // page number
 enum Page { PAGE_MAIN, PAGE_TWO };
 static Page currentPage = PAGE_MAIN;
+int fuelPort = 0;
+int fuelStb = 0;
+int waterPort = 0;
+int waterStb = 0;
 
 Inkplate display(INKPLATE_1BIT);
 Display::Text title("SeaEsta", {400, 80}, 2);
@@ -79,10 +83,10 @@ void callback(char* topic, byte* payload, unsigned int length) {
   else if (t == String(TOPIC_AUX1) + "/state")     { on ? aux1_toggle.enable()     : aux1_toggle.disable(); }
   else if (t == String(TOPIC_AUX2) + "/state")     { on ? aux2_toggle.enable()     : aux2_toggle.disable(); }
   else if (t == String(TOPIC_AUX3) + "/state")     { on ? aux3_toggle.enable()     : aux3_toggle.disable(); }
-  else if (t == "tanks/fuelPort")   { Serial.println("fuelPort Level: " + msg); }
-  else if (t == "tanks/fuelStb")    { Serial.println("fuelStb Level: " + msg); }
-  else if (t == "tanks/waterPort")  { Serial.println("waterPort Level: " + msg); }
-  else if (t == "tanks/waterStb")   { Serial.println("waterStb Level: " + msg); }
+  else if (t == "tanks/fuelPort")   { fuelPort = msg.toInt(); Serial.println(fuelPort); }
+  else if (t == "tanks/fuelStb")    { fuelStb = msg.toInt(); Serial.println(fuelStb); }
+  else if (t == "tanks/waterPort")  { waterPort = msg.toInt(); Serial.println(waterPort); }
+  else if (t == "tanks/waterStb")   { waterStb = msg.toInt(); Serial.println(waterStb); }
 
   // Optional: small log
   char logEntry[128];
