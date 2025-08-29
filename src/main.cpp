@@ -80,7 +80,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
   else if (t == String(TOPIC_AUX2) + "/state")     { on ? aux2_toggle.enable()     : aux2_toggle.disable(); }
   else if (t == String(TOPIC_AUX3) + "/state")     { on ? aux3_toggle.enable()     : aux3_toggle.disable(); }
   else if (t == "tanks/fuelPort")   { Serial.println("fuelPort Level: " + msg); }
-  else if (t == "tanks/fuelStb")    { Serial1.println("fuelStb Level: " + msg); }
+  else if (t == "tanks/fuelStb")    { Serial.println("fuelStb Level: " + msg); }
   else if (t == "tanks/waterPort")  { Serial.println("waterPort Level: " + msg); }
   else if (t == "tanks/waterStb")   { Serial.println("waterStb Level: " + msg); }
 
