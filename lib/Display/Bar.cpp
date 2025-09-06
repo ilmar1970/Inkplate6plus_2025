@@ -4,7 +4,7 @@ using Display::Bar;
 
 int16_t Bar::rectRadius = 5;
 
-Bar::Bar(std::shared_ptr<Inkplate> display, DisplayCoordinates barPosition, DisplayCoordinates barSize) : Drawable(display) {
+Bar::Bar(InkplatePtr display, DisplayCoordinates barPosition, DisplayCoordinates barSize) : Drawable(display) {
     this->barPosition = barPosition;
     this->barSize = barSize;
 }

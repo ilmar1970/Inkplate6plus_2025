@@ -6,25 +6,24 @@
 #include <Arduino.h>
 #include <Inkplate.h>
 #include "FreeSans18pt7b.h"
+#include <Alias.h>
 
+using InkplatePtr = std::shared_ptr<Inkplate>;
+using PagePtr = std::shared_ptr<Display::Page>;
+using TextPtr = std::shared_ptr<Display::Text>;
+using TogglePtr = std::shared_ptr<Display::Toggle>;
 using DisplayCoordinates = std::pair<int16_t, int16_t>;
-
-template<class T>
-using OnClickListener = std::function<void(T)>;
-
-template<class P>
-using PointerArray = std::vector<std::shared_ptr<P>>;
 
 namespace Display {
     class Drawable {
         public:
-            std::shared_ptr<Inkplate> display;
+            InkplatePtr display;
 
-            Drawable(std::shared_ptr<Inkplate> display);
+            Drawable(InkplatePtr display);
             std::pair<std::vector<DisplayCoordinates>, uint16_t> readTouchData();
 
             virtual void draw() = 0;
-            virtual ~Drawable() = default;
+            ~Drawable() = default;
     };
 
     class Text : public Drawable {
@@ -35,7 +34,7 @@ namespace Display {
             const GFXfont* font;
 
             Text(
-                std::shared_ptr<Inkplate> display,
+                InkplatePtr display,
                 const char* text,
                 DisplayCoordinates textPosition,
                 int textSize,
@@ -56,7 +55,7 @@ namespace Display {
             static OnClickListener<Toggle*> onClickListener;
 
             Toggle(
-                std::shared_ptr<Inkplate> display,
+                InkplatePtr display,
                 const char* text,
                 const char* topic,
                 DisplayCoordinates textPosition,
@@ -78,7 +77,7 @@ namespace Display {
             DisplayCoordinates iconSize;
             
             Icon(
-                std::shared_ptr<Inkplate> display,
+                InkplatePtr display,
                 const uint8_t* bitmap,
                 DisplayCoordinates iconPosition,
                 DisplayCoordinates iconSize
@@ -94,7 +93,7 @@ namespace Display {
             static int16_t rectRadius;
 
             Bar(
-                std::shared_ptr<Inkplate> display,
+                InkplatePtr display,
                 DisplayCoordinates barPosition,
                 DisplayCoordinates barSize
             );
@@ -105,10 +104,9 @@ namespace Display {
         public:
             PointerArray<Drawable> objects;
 
-            Page(std::shared_ptr<Inkplate> display);
+            Page(InkplatePtr display);
             void attachObject(std::shared_ptr<Drawable> object);
             void draw() override;
-            ~Page() = default;
     };
 }
 

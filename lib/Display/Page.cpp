@@ -2,7 +2,7 @@
 
 using Display::Page;
 
-Page::Page(std::shared_ptr<Inkplate> display) : Drawable(display) {
+Page::Page(InkplatePtr display) : Drawable(display) {
     this->objects = PointerArray<Drawable>{};
 }
 

@@ -2,11 +2,11 @@
 
 using Display::Drawable;
 
-Drawable::Drawable(std::shared_ptr<Inkplate> display) {
+Drawable::Drawable(InkplatePtr display) {
     this->display = display;
 }
 
-std::pair<std::vector<DisplayCoordinates>, uint16_t> Display::Drawable::readTouchData() {
+std::pair<std::vector<DisplayCoordinates>, uint16_t> Drawable::readTouchData() {
     std::vector<DisplayCoordinates> touchEvents;
     uint16_t n = 0;
     uint16_t x[2], y[2];

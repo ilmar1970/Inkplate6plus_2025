@@ -2,7 +2,7 @@
 
 using Display::Icon;
 
-Icon::Icon(std::shared_ptr<Inkplate> display, const uint8_t* bitmap, DisplayCoordinates iconPosition, DisplayCoordinates iconSize) : Drawable(display) {
+Icon::Icon(InkplatePtr display, const uint8_t* bitmap, DisplayCoordinates iconPosition, DisplayCoordinates iconSize) : Drawable(display) {
     this->bitmap = bitmap;
     this->iconPosition = iconPosition;
     this->iconSize = iconSize;
