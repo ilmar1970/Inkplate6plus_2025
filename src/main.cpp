@@ -29,14 +29,12 @@ PagePtr activePage;
 
 void setupTogglePage() {
   togglePage->attachObject(TextPtr(new Display::Text(display, "SeaEsta", {400, 80}, 2, &FreeSans18pt7b)));
-
-  // togglePage->attachObject(new Display::Text("SeaEsta", {400, 80}, 2));
-  // togglePage->attachObject(new Display::Toggle("WiFi Booster", TOPIC_BOOSTER, {100, 200}));
-  // togglePage->attachObject(new Display::Toggle("Cell", TOPIC_CELL, {100, 400}));
-  // togglePage->attachObject(new Display::Toggle("Starlink", TOPIC_STARLINK, {100, 600}));
-  // togglePage->attachObject(new Display::Toggle("AUX1", TOPIC_AUX1, {600, 200}));
-  // togglePage->attachObject(new Display::Toggle("AUX2", TOPIC_AUX2, {600, 400}));
-  // togglePage->attachObject(new Display::Toggle("AUX3", TOPIC_AUX3, {600, 600}));
+  togglePage->attachObject(TogglePtr(new Display::Toggle(display, "WiFi Booster", TOPIC_BOOSTER, {100, 200}, 1, &FreeSans18pt7b, false)));
+  togglePage->attachObject(TogglePtr(new Display::Toggle(display, "Cell", TOPIC_CELL, {100, 400}, 1, &FreeSans18pt7b, false)));
+  togglePage->attachObject(TogglePtr(new Display::Toggle(display, "Starlink", TOPIC_STARLINK, {100, 600}, 1, &FreeSans18pt7b, false)));
+  togglePage->attachObject(TogglePtr(new Display::Toggle(display, "AUX1", TOPIC_AUX1, {600, 200}, 1, &FreeSans18pt7b, false)));
+  togglePage->attachObject(TogglePtr(new Display::Toggle(display, "AUX2", TOPIC_AUX2, {600, 400}, 1, &FreeSans18pt7b, false)));
+  togglePage->attachObject(TogglePtr(new Display::Toggle(display, "AUX3", TOPIC_AUX3, {600, 600}, 1, &FreeSans18pt7b, false)));
 }
 
 // void setupBarPage() {

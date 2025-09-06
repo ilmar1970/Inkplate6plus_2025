@@ -9,7 +9,7 @@ Text::Text(std::shared_ptr<Inkplate> display, const char* text, DisplayCoordinat
     this->font = font;
 }
 
-void Text::draw() const {
+void Text::draw() {
     display->setFont(font);
     display->setTextColor(BLACK, WHITE);
     display->setTextSize(textSize);

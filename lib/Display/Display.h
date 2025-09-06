@@ -23,7 +23,7 @@ namespace Display {
             Drawable(std::shared_ptr<Inkplate> display);
             std::pair<std::vector<DisplayCoordinates>, uint16_t> readTouchData();
 
-            virtual void draw() const = 0;
+            virtual void draw() = 0;
             virtual ~Drawable() = default;
     };
 
@@ -41,16 +41,15 @@ namespace Display {
                 int textSize,
                 const GFXfont* font
             );
-            void draw() const override;
+            void draw() override;
     };
 
     class Toggle : public Text {
         public:
-            const char* name;
+            const char* topic;
             DisplayCoordinates rectPosition;
             DisplayCoordinates circlePosition;
             bool state;
-            bool wasPressed;
 
             static int16_t circleRadius;
             static int16_t rectRadius;
@@ -59,16 +58,17 @@ namespace Display {
             Toggle(
                 std::shared_ptr<Inkplate> display,
                 const char* text,
+                const char* topic,
                 DisplayCoordinates textPosition,
                 int textSize,
                 const GFXfont* font,
-                const char* name,
                 bool state
             );
-            using Text::draw;
             void readCheckState(DisplayCoordinates touchCoordinates, const OnClickListener<Toggle*>& customOnClickListener = nullptr);
             void enable(bool is_partial=true);
             void disable(bool is_partial=true);
+
+            void draw() override;
     };
 
     class Icon : public Drawable {
@@ -83,7 +83,7 @@ namespace Display {
                 DisplayCoordinates iconPosition,
                 DisplayCoordinates iconSize
             );
-            void draw() const override;
+            void draw() override;
     };
 
     class Bar : public Drawable {
@@ -98,7 +98,7 @@ namespace Display {
                 DisplayCoordinates barPosition,
                 DisplayCoordinates barSize
             );
-            void draw() const override;
+            void draw() override;
     };
 
     class Page : public Drawable {
@@ -107,7 +107,7 @@ namespace Display {
 
             Page(std::shared_ptr<Inkplate> display);
             void attachObject(std::shared_ptr<Drawable> object);
-            void draw() const override;
+            void draw() override;
             ~Page() = default;
     };
 }

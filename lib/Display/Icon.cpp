@@ -8,6 +8,6 @@ Icon::Icon(std::shared_ptr<Inkplate> display, const uint8_t* bitmap, DisplayCoor
     this->iconSize = iconSize;
 }
 
-void Icon::draw() const {
+void Icon::draw() {
     display->drawBitmap3Bit(this->iconPosition.first, this->iconPosition.second, this->bitmap, this->iconSize.first, this->iconSize.second);
 }

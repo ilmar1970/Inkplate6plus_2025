@@ -9,13 +9,13 @@ OnClickListener<Toggle*> Toggle::onClickListener = nullptr;
 Toggle::Toggle(
     std::shared_ptr<Inkplate> display,
     const char* text,
+    const char* topic,
     DisplayCoordinates textPosition,
     int textSize,
     const GFXfont* font,
-    const char* name,
     bool state
 ) : Text(display, text, textPosition, textSize, font){
-    this->name = name;
+    this->topic = topic;
     this->rectPosition = {textPosition.first + 221, textPosition.second - 30};
     this->circlePosition = {textPosition.first + 285, textPosition.second - 10};
     this->state = state;
@@ -40,7 +40,7 @@ void Toggle::disable(bool is_partial) {
     state = false;
 }
 
-void Display::Toggle::readCheckState(DisplayCoordinates touchCoordinates, const OnClickListener<Toggle *> &customOnClickListener) {
+void Toggle::readCheckState(DisplayCoordinates touchCoordinates, const OnClickListener<Toggle *> &customOnClickListener) {
     bool pressed = false;
     int xbr = rectPosition.first + 85;
     int ybr = rectPosition.second + 42;
@@ -52,4 +52,9 @@ void Display::Toggle::readCheckState(DisplayCoordinates touchCoordinates, const 
         auto handler = (customOnClickListener ? customOnClickListener : this->onClickListener);
         if (handler) handler(this);
     }
+}
+
+void Toggle::draw() {
+    Text::draw();
+    state ? enable(false) : disable(false);
 }

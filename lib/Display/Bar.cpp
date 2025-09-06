@@ -9,6 +9,6 @@ Bar::Bar(std::shared_ptr<Inkplate> display, DisplayCoordinates barPosition, Disp
     this->barSize = barSize;
 }
 
-void Bar::draw() const {
+void Bar::draw() {
     display->drawRoundRect(this->barPosition.first, this->barPosition.second, this->barSize.first, this->barSize.second, Bar::rectRadius, BLACK);
 }

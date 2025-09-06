@@ -6,7 +6,7 @@ Page::Page(std::shared_ptr<Inkplate> display) : Drawable(display) {
     this->objects = PointerArray<Drawable>{};
 }
 
-void Page::draw() const {
+void Page::draw() {
     display->setInkplatePowerMode(INKPLATE_USB_PWR_ONLY);
     display->begin();
     delay(1000);
