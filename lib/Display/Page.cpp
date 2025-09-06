@@ -2,10 +2,8 @@
 
 using Display::Page;
 
-Page::Page() {
-    this->display = new Inkplate(INKPLATE_1BIT);
-    this->objects = new Drawable*[100];
-    this->lastObjectIndex = 0;
+Page::Page() : objects{} {
+    this->display = std::unique_ptr<Inkplate>(new Inkplate(INKPLATE_1BIT));
 }
 
 void Page::draw() const {
@@ -14,27 +12,17 @@ void Page::draw() const {
     display->frontlight(true);
     display->setFrontlight(3);
     display->clearDisplay();
-    if (display->tsInit(true)){
+    if(display->tsInit(true)) {
         Serial.println("TS: success");
     } else {
         Serial.println("TS: fail");
     }
-    for(int i = 0; i < lastObjectIndex; i++) {
-        this->objects[i]->draw();
+    for (const std::unique_ptr<Drawable> &obj : this->objects) {
+        obj->draw();
     }
     display->display();
 }
 
 void Page::attachObject(Drawable* object) {
-    objects[lastObjectIndex] = object;
-    lastObjectIndex++;
-    object->display = display;
-}
-
-Page::~Page() {
-    delete display;
-    for(int i = 0; i < lastObjectIndex; i++){
-        delete objects[i];
-    }
-    delete[] objects;
+    objects.push_back(std::unique_ptr<Drawable>(object));
 }

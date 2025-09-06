@@ -8,18 +8,22 @@
 #include "FreeSans18pt7b.h"
 
 using DisplayCoordinates = std::pair<int16_t, int16_t>;
+
 template<class T>
 using OnClickListener = std::function<void(T)>;
+
+template<class P>
+using PointerArray = std::vector<std::unique_ptr<P>>;
 
 namespace Display {
     class Drawable {
         public:
-            Inkplate* display;
+            std::unique_ptr<Inkplate> display;
 
             std::pair<std::vector<DisplayCoordinates>, uint16_t> readTouchData();
 
-            virtual void draw() const;
-            virtual ~Drawable() {}
+            virtual void draw() const = 0;
+            virtual ~Drawable() = default;
     };
 
     class Text : public Drawable {
@@ -35,7 +39,7 @@ namespace Display {
                 int textSize=1,
                 const GFXfont* font=&FreeSans18pt7b
             );
-            void draw() const;
+            void draw() const override;
     };
 
     class Toggle : public Text {
@@ -75,14 +79,13 @@ namespace Display {
                 DisplayCoordinates iconPosition,
                 DisplayCoordinates iconSize
             );
-            void draw() const;
+            void draw() const override;
     };
 
     class Bar : public Drawable {
         public:
             DisplayCoordinates barPosition;
             DisplayCoordinates barSize;
-            // display.fillRect would likely fill everything. Need partial filling
 
             static int16_t rectRadius;
 
@@ -90,19 +93,17 @@ namespace Display {
                 DisplayCoordinates barPosition,
                 DisplayCoordinates barSize
             );
-            void draw() const;
+            void draw() const override;
     };
 
     class Page : public Drawable {
         public:
-            Inkplate* display;
-            Drawable** objects;
-            int lastObjectIndex;
+            PointerArray<Drawable> objects;
 
             Page();
             void attachObject(Drawable* object);
-            void draw() const;
-            ~Page();
+            void draw() const override;
+            ~Page() = default;
     };
 }
 

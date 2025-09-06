@@ -19,7 +19,7 @@
 
 Display::Page togglePage{};
 Display::Page barPage{};
-Display::Page* activePage;
+std::unique_ptr<Display::Page> activePage;
 
 void setupTogglePage() {
   Display::Text title("SeaEsta", {400, 80}, 2);
