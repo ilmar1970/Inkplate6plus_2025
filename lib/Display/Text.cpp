@@ -2,7 +2,7 @@
 
 using Display::Text;
 
-Text::Text(const char *text, DisplayCoordinates textPosition, int textSize, const GFXfont *font) {
+Text::Text(std::shared_ptr<Inkplate> display, const char* text, DisplayCoordinates textPosition, int textSize, const GFXfont* font) : Drawable(display) {
     this->text = text;
     this->textPosition = textPosition;
     this->textSize = textSize;

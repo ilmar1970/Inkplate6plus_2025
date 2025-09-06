@@ -2,27 +2,32 @@
 
 using Display::Page;
 
-Page::Page() : objects{} {
-    this->display = std::unique_ptr<Inkplate>(new Inkplate(INKPLATE_1BIT));
+Page::Page(std::shared_ptr<Inkplate> display) : Drawable(display) {
+    this->objects = PointerArray<Drawable>{};
 }
 
 void Page::draw() const {
     display->setInkplatePowerMode(INKPLATE_USB_PWR_ONLY);
     display->begin();
+    delay(1000);
+    display->clearDisplay();
     display->frontlight(true);
     display->setFrontlight(3);
-    display->clearDisplay();
     if(display->tsInit(true)) {
         Serial.println("TS: success");
     } else {
         Serial.println("TS: fail");
     }
-    for (const std::unique_ptr<Drawable> &obj : this->objects) {
-        obj->draw();
+    for (const auto &obj : this->objects) {
+        if (obj) obj->draw();
     }
     display->display();
 }
 
-void Page::attachObject(Drawable* object) {
-    objects.push_back(std::unique_ptr<Drawable>(object));
+void Page::attachObject(std::shared_ptr<Drawable> object) {
+    if (object) {
+        objects.push_back(object);
+    } else {
+        Serial.printf("Attemped to attach null Drawable to page: %p\n", this);
+    }
 }

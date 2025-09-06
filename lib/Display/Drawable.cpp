@@ -1,5 +1,11 @@
 #include "Display.h"
 
+using Display::Drawable;
+
+Drawable::Drawable(std::shared_ptr<Inkplate> display) {
+    this->display = display;
+}
+
 std::pair<std::vector<DisplayCoordinates>, uint16_t> Display::Drawable::readTouchData() {
     std::vector<DisplayCoordinates> touchEvents;
     uint16_t n = 0;

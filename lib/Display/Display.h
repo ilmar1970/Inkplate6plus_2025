@@ -13,13 +13,14 @@ template<class T>
 using OnClickListener = std::function<void(T)>;
 
 template<class P>
-using PointerArray = std::vector<std::unique_ptr<P>>;
+using PointerArray = std::vector<std::shared_ptr<P>>;
 
 namespace Display {
     class Drawable {
         public:
-            std::unique_ptr<Inkplate> display;
+            std::shared_ptr<Inkplate> display;
 
+            Drawable(std::shared_ptr<Inkplate> display);
             std::pair<std::vector<DisplayCoordinates>, uint16_t> readTouchData();
 
             virtual void draw() const = 0;
@@ -34,10 +35,11 @@ namespace Display {
             const GFXfont* font;
 
             Text(
+                std::shared_ptr<Inkplate> display,
                 const char* text,
                 DisplayCoordinates textPosition,
-                int textSize=1,
-                const GFXfont* font=&FreeSans18pt7b
+                int textSize,
+                const GFXfont* font
             );
             void draw() const override;
     };
@@ -55,12 +57,13 @@ namespace Display {
             static OnClickListener<Toggle*> onClickListener;
 
             Toggle(
+                std::shared_ptr<Inkplate> display,
                 const char* text,
-                const char* name,
                 DisplayCoordinates textPosition,
-                int textSize=1,
-                const GFXfont* font=&FreeSans18pt7b,
-                bool state=false
+                int textSize,
+                const GFXfont* font,
+                const char* name,
+                bool state
             );
             using Text::draw;
             void readCheckState(DisplayCoordinates touchCoordinates, const OnClickListener<Toggle*>& customOnClickListener = nullptr);
@@ -75,6 +78,7 @@ namespace Display {
             DisplayCoordinates iconSize;
             
             Icon(
+                std::shared_ptr<Inkplate> display,
                 const uint8_t* bitmap,
                 DisplayCoordinates iconPosition,
                 DisplayCoordinates iconSize
@@ -90,6 +94,7 @@ namespace Display {
             static int16_t rectRadius;
 
             Bar(
+                std::shared_ptr<Inkplate> display,
                 DisplayCoordinates barPosition,
                 DisplayCoordinates barSize
             );
@@ -100,8 +105,8 @@ namespace Display {
         public:
             PointerArray<Drawable> objects;
 
-            Page();
-            void attachObject(Drawable* object);
+            Page(std::shared_ptr<Inkplate> display);
+            void attachObject(std::shared_ptr<Drawable> object);
             void draw() const override;
             ~Page() = default;
     };

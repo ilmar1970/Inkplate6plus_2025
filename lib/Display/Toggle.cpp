@@ -7,13 +7,14 @@ int16_t Toggle::rectRadius = 15;
 OnClickListener<Toggle*> Toggle::onClickListener = nullptr;
 
 Toggle::Toggle(
+    std::shared_ptr<Inkplate> display,
     const char* text,
-    const char* name,
     DisplayCoordinates textPosition,
     int textSize,
     const GFXfont* font,
+    const char* name,
     bool state
-) : Text(text, textPosition, textSize, font){
+) : Text(display, text, textPosition, textSize, font){
     this->name = name;
     this->rectPosition = {textPosition.first + 221, textPosition.second - 30};
     this->circlePosition = {textPosition.first + 285, textPosition.second - 10};
@@ -39,7 +40,7 @@ void Toggle::disable(bool is_partial) {
     state = false;
 }
 
-void Display::Toggle::readCheckState(DisplayCoordinates touchCoordinates, const OnClickListener<Toggle *>& customOnClickListener) {
+void Display::Toggle::readCheckState(DisplayCoordinates touchCoordinates, const OnClickListener<Toggle *> &customOnClickListener) {
     bool pressed = false;
     int xbr = rectPosition.first + 85;
     int ybr = rectPosition.second + 42;
