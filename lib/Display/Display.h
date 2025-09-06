@@ -1,6 +1,8 @@
 #ifndef DISPLAY_H
 #define DISPLAY_H
 
+#include <vector>
+
 #include <Arduino.h>
 #include <Inkplate.h>
 #include "FreeSans18pt7b.h"
@@ -13,6 +15,8 @@ namespace Display {
     class Drawable {
         public:
             Inkplate* display;
+
+            std::pair<std::vector<DisplayCoordinates>, uint16_t> readTouchData();
 
             virtual void draw() const;
             virtual ~Drawable() {}
@@ -40,6 +44,7 @@ namespace Display {
             DisplayCoordinates rectPosition;
             DisplayCoordinates circlePosition;
             bool state;
+            bool wasPressed;
 
             static int16_t circleRadius;
             static int16_t rectRadius;
@@ -54,7 +59,7 @@ namespace Display {
                 bool state=false
             );
             using Text::draw;
-            void readCheckState(const OnClickListener<Toggle*>& customOnClickListener = nullptr);
+            void readCheckState(DisplayCoordinates touchCoordinates, const OnClickListener<Toggle*>& customOnClickListener = nullptr);
             void enable(bool is_partial=true);
             void disable(bool is_partial=true);
     };

@@ -7,12 +7,12 @@ int16_t Toggle::rectRadius = 15;
 OnClickListener<Toggle*> Toggle::onClickListener = nullptr;
 
 Toggle::Toggle(
-        const char* text,
-        const char* name,
-        DisplayCoordinates textPosition,
-        int textSize,
-        const GFXfont* font,
-        bool state
+    const char* text,
+    const char* name,
+    DisplayCoordinates textPosition,
+    int textSize,
+    const GFXfont* font,
+    bool state
 ) : Text(text, textPosition, textSize, font){
     this->name = name;
     this->rectPosition = {textPosition.first + 221, textPosition.second - 30};
@@ -39,9 +39,16 @@ void Toggle::disable(bool is_partial) {
     state = false;
 }
 
-void Display::Toggle::readCheckState(const OnClickListener<Toggle *>& customOnClickListener) {
-    if(display->touchInArea(rectPosition.first, rectPosition.second, 85, 42)){
-        //state ? disable() : enable();
-        customOnClickListener == nullptr ? Toggle::onClickListener(this) : customOnClickListener(this);
+void Display::Toggle::readCheckState(DisplayCoordinates touchCoordinates, const OnClickListener<Toggle *>& customOnClickListener) {
+    bool pressed = false;
+    int xbr = rectPosition.first + 85;
+    int ybr = rectPosition.second + 42;
+    if (touchCoordinates.first >= rectPosition.first && touchCoordinates.first <= xbr &&
+        touchCoordinates.second <= ybr && touchCoordinates.second >= rectPosition.second) {
+        pressed = true;
+    }
+    if (pressed) {
+        auto handler = (customOnClickListener ? customOnClickListener : this->onClickListener);
+        if (handler) handler(this);
     }
 }
