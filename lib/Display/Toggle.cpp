@@ -4,7 +4,6 @@ using Display::Toggle;
 
 int16_t Toggle::circleRadius = 15;
 int16_t Toggle::rectRadius = 15;
-OnClickListener<Toggle*> Toggle::onClickListener = nullptr;
 
 Toggle::Toggle(
     std::shared_ptr<Inkplate> display,
@@ -40,7 +39,7 @@ void Toggle::disable(bool is_partial) {
     state = false;
 }
 
-void Toggle::readCheckState(DisplayCoordinates touchCoordinates, const OnClickListener<Toggle *> &customOnClickListener) {
+void Toggle::readCheckState(DisplayCoordinates touchCoordinates, const OnEventListener<Toggle*>& customOnClickListener) {
     bool pressed = false;
     int xbr = rectPosition.first + 85;
     int ybr = rectPosition.second + 42;
@@ -49,8 +48,7 @@ void Toggle::readCheckState(DisplayCoordinates touchCoordinates, const OnClickLi
         pressed = true;
     }
     if (pressed) {
-        auto handler = (customOnClickListener ? customOnClickListener : this->onClickListener);
-        if (handler) handler(this);
+        customOnClickListener ? customOnClickListener(this) : onClickListener(this);
     }
 }
 

@@ -6,12 +6,9 @@
 #include <Arduino.h>
 #include <Inkplate.h>
 #include "FreeSans18pt7b.h"
-#include <Alias.h>
+#include "Alias.h"
 
 using InkplatePtr = std::shared_ptr<Inkplate>;
-using PagePtr = std::shared_ptr<Display::Page>;
-using TextPtr = std::shared_ptr<Display::Text>;
-using TogglePtr = std::shared_ptr<Display::Toggle>;
 using DisplayCoordinates = std::pair<int16_t, int16_t>;
 
 namespace Display {
@@ -48,11 +45,11 @@ namespace Display {
             const char* topic;
             DisplayCoordinates rectPosition;
             DisplayCoordinates circlePosition;
+            OnEventListener<Toggle*> onClickListener;
             bool state;
 
             static int16_t circleRadius;
             static int16_t rectRadius;
-            static OnClickListener<Toggle*> onClickListener;
 
             Toggle(
                 InkplatePtr display,
@@ -63,7 +60,7 @@ namespace Display {
                 const GFXfont* font,
                 bool state
             );
-            void readCheckState(DisplayCoordinates touchCoordinates, const OnClickListener<Toggle*>& customOnClickListener = nullptr);
+            void readCheckState(DisplayCoordinates touchCoordinates, const OnEventListener<Toggle*>& onClickListener = nullptr);
             void enable(bool is_partial=true);
             void disable(bool is_partial=true);
 
@@ -109,5 +106,9 @@ namespace Display {
             void draw() override;
     };
 }
+
+using PagePtr = std::shared_ptr<Display::Page>;
+using TextPtr = std::shared_ptr<Display::Text>;
+using TogglePtr = std::shared_ptr<Display::Toggle>;
 
 #endif

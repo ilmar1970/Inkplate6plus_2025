@@ -8,24 +8,13 @@
 #include "secrets.h"
 #include <PubSub.h>
 
-#define TOPIC_LOG "inkplate/log"
-#define TOPIC_ERROR "inkplate/last_error"
-#define TOPIC_IP "inkplate/ip"
-#define TOPIC_SUB "inkplate/control/+/state"
-#define TOPIC_BOOSTER "inkplate/control/booster"
-#define TOPIC_CELL "inkplate/control/cell"
-#define TOPIC_STARLINK "inkplate/control/starlink"
-#define TOPIC_AUX1 "inkplate/control/batlight"
-#define TOPIC_AUX2 "inkplate/control/batfan"
-#define TOPIC_AUX3 "inkplate/control/aux3"
-#define TOPIC_TANK "tanks/#"
-
 InkplatePtr display;
 PagePtr togglePage;
 PagePtr barPage;
 PagePtr activePage;
 
 PubSubClientPtr client;
+TopicManagerPtr topicManager;
 
 // --- Backlight control ---
 constexpr uint32_t BACKLIGHT_TIMEOUT_MS = 60000;  // 60s (adjust as you like)
@@ -57,20 +46,21 @@ void setupTogglePage() {
     TopicPtr aux2Topic = TopicPtr(new PubSub::Topic(client, TOPIC_AUX2));
     TopicPtr aux3Topic = TopicPtr(new PubSub::Topic(client, TOPIC_AUX3));
 
-    setupToggleListener(wifi_toggle, wifi_toggle.name);
-    setupToggleListener(cell_toggle, cell_toggle.name);
-    setupToggleListener(starlink_toggle, starlink_toggle.name);
-    setupToggleListener(aux1_toggle, aux1_toggle.name);
-    setupToggleListener(aux2_toggle, aux2_toggle.name);
-    setupToggleListener(aux3_toggle, aux3_toggle.name);
+    wifiTopic->onReciveListener = [wifiToggle](const char* msg) {
+        (msg == "1" || msg == "true" || msg == "on") ? wifiToggle->enable() : wifiToggle->disable();
+    };
+
+    wifiToggle->onClickListener = [wifiTopic](Display::Toggle *t) {
+        if (millis() < wakeGuardUntilMs) return;
+        lastInteractionMs = millis();
+        const char *payload = t->state ? "0" : "1";
+        bool ok = client->publish(wifiTopic->topicName, payload, false);
+        String s = String("CMD [") + wifiTopic->topicName + "] => " + payload + (ok ? "" : " (fail)");
+        topicManager->logMqtt(wifiTopic->topicName, s.c_str());
+    };
 
     togglePage->attachObject(title);
-    togglePage->attachObject();
-    togglePage->attachObject();
-    togglePage->attachObject();
-    togglePage->attachObject();
-    togglePage->attachObject();
-    togglePage->attachObject();
+    togglePage->attachObject(wifiToggle);
 }
 
 // void setupBarPage() {
@@ -114,14 +104,7 @@ void changePage() {
     activePage->draw();
 }
 
-void log_mqtt(const String &msg, bool error = false) {
-    if (error) {
-        client.publish(TOPIC_ERROR, msg.c_str());
-    }
-    client.publish(TOPIC_LOG, msg.c_str());
-}
-
-void setup_wifi() {
+void networkSetup() {
     WiFi.mode(WIFI_STA);
     WiFi.begin(ssid, password);
     Serial.print("Connecting to WiFi ..");
@@ -130,117 +113,51 @@ void setup_wifi() {
         delay(1000);
     }
     Serial.println(WiFi.localIP());
-}
 
-void callback(char *topic, byte *payload, unsigned int length) {
-    String msg;
-    msg.reserve(length);
-    for (unsigned int i = 0; i < length; i++) {
-        msg += (char)payload[i];
-    }
-
-    // normalize
-    String t = topic;
-    msg.trim();
-    msg.toLowerCase();
-    bool on = (msg == "1" || msg == "true" || msg == "on");
-
-    // Route by exact /state topic
-    if (t == String(TOPIC_BOOSTER) + "/state") {
-        on ? wifi_toggle.enable() : wifi_toggle.disable();
-    } else if (t == String(TOPIC_CELL) + "/state") {
-        on ? cell_toggle.enable() : cell_toggle.disable();
-    } else if (t == String(TOPIC_STARLINK) + "/state") {
-        on ? starlink_toggle.enable() : starlink_toggle.disable();
-    } else if (t == String(TOPIC_AUX1) + "/state") {
-        on ? aux1_toggle.enable() : aux1_toggle.disable();
-    } else if (t == String(TOPIC_AUX2) + "/state") {
-        on ? aux2_toggle.enable() : aux2_toggle.disable();
-    } else if (t == String(TOPIC_AUX3) + "/state") {
-        on ? aux3_toggle.enable() : aux3_toggle.disable();
-    } else if (t == "tanks/fuelPort") {
-        fuelPort = msg.toInt();
-        Serial.println(fuelPort);
-    } else if (t == "tanks/fuelStb") {
-        fuelStb = msg.toInt();
-        Serial.println(fuelStb);
-    } else if (t == "tanks/waterPort") {
-        waterPort = msg.toInt();
-        Serial.println(waterPort);
-    } else if (t == "tanks/waterStb") {
-        waterStb = msg.toInt();
-        Serial.println(waterStb);
-    }
-
-    // Optional: small log
-    char logEntry[128];
-    snprintf(logEntry, sizeof(logEntry), "STATE [%s] <= %s", topic, msg.c_str());
-    log_mqtt(logEntry);
-}
-
-void setupToggleListener(Display::Toggle &toggle, const char *topic) {
-    toggle.onClickListener = [topic](Display::Toggle *t) {
-        if (millis() < wakeGuardUntilMs) return;
-        lastInteractionMs = millis();
-        const char *payload = t->state ? "0" : "1";
-        bool ok = client->publish(topic, payload, false);
-        String s = String("CMD [") + topic + "] => " + payload + (ok ? "" : " (fail)");
-        log_mqtt(s.c_str());
-    };
-}
-
-void waitClick() {
-    setupToggleListener(wifi_toggle, wifi_toggle.name);
-    setupToggleListener(cell_toggle, cell_toggle.name);
-    setupToggleListener(starlink_toggle, starlink_toggle.name);
-    setupToggleListener(aux1_toggle, aux1_toggle.name);
-    setupToggleListener(aux2_toggle, aux2_toggle.name);
-    setupToggleListener(aux3_toggle, aux3_toggle.name);
-}
-
-void reconnect() {
-    while (!client->connected()) {
-        Serial.print("Attempting MQTT connection...");
-        if (client->connect(client_id, mqtt_user, mqtt_pass)) {
-            Serial.println("connected");
-            client->subscribe(TOPIC_SUB);
-            client->subscribe(TOPIC_TANK);
-            IPAddress ip = WiFi.localIP();
-            String ipStr = ip.toString();
-            client->publish(TOPIC_IP, ipStr.c_str());
-            log_mqtt("Connected to MQTT my IP: " + ipStr);
-        } else {
-            Serial.print("failed, rc=");
-            Serial.print(client->state());
-            Serial.println(". Trying again in 5s");
-            delay(5000);
-        }
-    }
-}
-
-void networkSetup() {
     WiFiClient espClient;
     client = PubSubClientPtr(new PubSubClient(espClient));
+
+    if (WiFi.status() == WL_CONNECTED) {
+        topicManager->logMqtt("/system",  "WiFi connected. IP address: " + WiFi.localIP().toString());
+    }
+}
+
+void networkLoop() {
+    if (WiFi.status() != WL_CONNECTED) {
+        Serial.println("WiFi reconnect ...");
+        WiFi.reconnect();
+        delay(500);
+        return;
+    }
+    if (!client->connected()) {
+        while (!client->connected()) {
+            Serial.print("Attempting MQTT connection...");
+            if (client->connect(client_id, mqtt_user, mqtt_pass)) {
+                Serial.println("connected");
+                client->subscribe(TOPIC_SUB);
+                client->subscribe(TOPIC_TANK);
+                IPAddress ip = WiFi.localIP();
+                String ipStr = ip.toString();
+                client->publish(TOPIC_IP, ipStr.c_str());
+                topicManager->logMqtt("/system", "Connected to MQTT my IP: " + ipStr);
+            } else {
+                Serial.print("failed, rc=");
+                Serial.print(client->state());
+                Serial.println(". Trying again in 5s");
+                delay(5000);
+            }
+        }
+    }
+    client->loop();
 }
 
 void setup() {
     Serial.begin(115200);
 
-    setup_wifi();
-    client->setServer(mqtt_server, mqtt_port);
-    client->setKeepAlive(60);
-    client->setCallback(callback);
-    if (WiFi.status() == WL_CONNECTED) {
-        log_mqtt("WiFi connected. IP address: " + WiFi.localIP().toString());
-    }
-    waitClick();
-
     display = InkplatePtr(new Inkplate(INKPLATE_1BIT));
     togglePage = PagePtr(new Display::Page(display));
-    // barPage = new Display::Page(display);
 
     setupTogglePage();
-    // setupBarPage();
 
     Serial.println("Calling togglePage->draw()...");
     togglePage->draw();
@@ -248,16 +165,6 @@ void setup() {
 }
 
 void loop() {
-    if (WiFi.status() != WL_CONNECTED) {
-        Serial.println("WiFi reconnect ...");
-        WiFi.reconnect();
-        delay(500);
-        return;
-    }
-    if (!client.connected()) {
-        reconnect();
-    }
-    client.loop();
     if (wakeOnAnyTap()) {
         // Skip processing toggles this iteration to avoid accidental toggle on wake
         return;
@@ -268,15 +175,15 @@ void loop() {
         backlightOn = false;
     }
 
-    std::pair<std::vector<DisplayCoordinates>, uint16_t> touchRecord = activePage->readTouchData();
-    if (touchRecord.second > 1) {
-        changePage();
-    } else if (touchRecord.second == 1 && activePage == togglePage) {
-        wifi_toggle.readCheckState(touchRecord.first[0]);
-        cell_toggle.readCheckState(touchRecord.first[0]);
-        starlink_toggle.readCheckState(touchRecord.first[0]);
-        aux1_toggle.readCheckState(touchRecord.first[0]);
-        aux2_toggle.readCheckState(touchRecord.first[0]);
-        aux3_toggle.readCheckState(touchRecord.first[0]);
-    }
+    // std::pair<std::vector<DisplayCoordinates>, uint16_t> touchRecord = activePage->readTouchData();
+    // if (touchRecord.second > 1) {
+    //     changePage();
+    // } else if (touchRecord.second == 1 && activePage == togglePage) {
+    //     wifi_toggle.readCheckState(touchRecord.first[0]);
+    //     cell_toggle.readCheckState(touchRecord.first[0]);
+    //     starlink_toggle.readCheckState(touchRecord.first[0]);
+    //     aux1_toggle.readCheckState(touchRecord.first[0]);
+    //     aux2_toggle.readCheckState(touchRecord.first[0]);
+    //     aux3_toggle.readCheckState(touchRecord.first[0]);
+    // }
 }

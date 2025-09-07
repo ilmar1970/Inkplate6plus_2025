@@ -6,6 +6,10 @@ Topic::Topic(PubSubClientPtr client, const char* topicName) : WithClient(client)
     this->topicName = topicName;
 }
 
-void Topic::callback() {
+bool Topic::shouldPreccesEvent(const char* route) {
+    return String(route) == String(topicName) + "/state";
+}
 
+void Topic::onSubReciveEvent(const char* msg, const OnReciveListener& customOnReciveListener) {
+    customOnReciveListener ? customOnReciveListener(msg) : onReciveListener(msg);
 }

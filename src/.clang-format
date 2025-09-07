@@ -1,0 +1,13 @@
+BasedOnStyle: Google
+IndentWidth: 4
+ColumnLimit: 120
+
+BraceWrapping:
+  AfterFunction: false
+  AfterClass: true
+  AfterNamespace: true
+  AfterControlStatement: true
+  AfterEnum: true
+  AfterStruct: true
+
+AllowShortFunctionsOnASingleLine: None
