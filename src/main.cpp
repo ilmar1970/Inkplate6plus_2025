@@ -3,7 +3,7 @@
 #include "secrets.h"
 #include "Display.h"
 #include <Inkplate.h>          // Inkplate library
-#include "page2.h" 
+#include "Page.h" 
 
 #define TOPIC_LOG "inkplate/log"
 #define TOPIC_ERROR "inkplate/last_error"
@@ -12,11 +12,12 @@
 #define TOPIC_BOOSTER "inkplate/control/booster"
 #define TOPIC_CELL "inkplate/control/cell"
 #define TOPIC_STARLINK "inkplate/control/starlink"
-#define TOPIC_AUX1 "inkplate/control/batlight"
-#define TOPIC_AUX2 "inkplate/control/batfan"
-#define TOPIC_AUX3 "inkplate/control/aux3"
+#define TOPIC_B_LIGHT "inkplate/control/batlight"
+#define TOPIC_B_FAN "inkplate/control/batfan"
+#define TOPIC_DECKWASH "inkplate/control/deckwash"
 #define TOPIC_TANK "tanks/#"
-
+#define TOPIC_AC_PORT "inkplate/control/acport"
+#define TOPIC_AC_STRB "inkplate/control/acstrb"
 
 // --- Backlight control ---
 constexpr uint32_t BACKLIGHT_TIMEOUT_MS = 60000; // 60s (adjust as you like)
@@ -27,21 +28,34 @@ static uint32_t lastInteractionMs = 0;
 static bool     backlightOn       = true;
 static uint32_t wakeGuardUntilMs  = 0; // swallow touches right after wake
 //bool nextPage = false; // page number
-enum Page { PAGE_MAIN, PAGE_TWO };
-static Page currentPage = PAGE_MAIN;
+enum Page2 { PAGE_MAIN, PAGE_TWO };
+static Page2 currentPage = PAGE_MAIN;
 int fuelPort = 0;
 int fuelStb = 0;
 int waterPort = 0;
 int waterStb = 0;
 
+// Example dynamic variables for each tank
+int dp_percent = 75; // 0..100
+int ds_percent = 50;
+int wp_percent = 30;
+int ws_percent = 90;
+bool bilge1 = true;
+bool bilge2 = false;
+bool bilge3 = true;
+bool bilge4 = false;
+bool bilge5 = false;
+bool bilge6 = false;
+
 Inkplate display(INKPLATE_1BIT);
+Page page(display);
 Display::Text title("SeaEsta", {400, 80}, 2);
 Display::Toggle wifi_toggle("Booster", TOPIC_BOOSTER, {100, 200});
 Display::Toggle cell_toggle("Cell", TOPIC_CELL, {100, 400});
 Display::Toggle starlink_toggle("Starlink", TOPIC_STARLINK, {100, 600});
-Display::Toggle aux1_toggle("BatLight", TOPIC_AUX1, {600, 200});
-Display::Toggle aux2_toggle("BatFan", TOPIC_AUX2, {600, 400});
-Display::Toggle aux3_toggle("AUX3", TOPIC_AUX3, {600, 600});
+Display::Toggle b_light("BatLight", TOPIC_B_LIGHT, {600, 200});
+Display::Toggle b_fan("BatFan", TOPIC_B_FAN, {600, 400});
+Display::Toggle deck_wash("AUX3", TOPIC_DECKWASH, {600, 600});
 
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -77,16 +91,16 @@ void callback(char* topic, byte* payload, unsigned int length) {
   bool on = (msg == "1" || msg == "true" || msg == "on");
 
   // Route by exact /state topic
-  if (t == String(TOPIC_BOOSTER) + "/state")       { on ? wifi_toggle.enable()     : wifi_toggle.disable(); }
-  else if (t == String(TOPIC_CELL) + "/state")     { on ? cell_toggle.enable()     : cell_toggle.disable(); }
-  else if (t == String(TOPIC_STARLINK) + "/state") { on ? starlink_toggle.enable() : starlink_toggle.disable(); }
-  else if (t == String(TOPIC_AUX1) + "/state")     { on ? aux1_toggle.enable()     : aux1_toggle.disable(); }
-  else if (t == String(TOPIC_AUX2) + "/state")     { on ? aux2_toggle.enable()     : aux2_toggle.disable(); }
-  else if (t == String(TOPIC_AUX3) + "/state")     { on ? aux3_toggle.enable()     : aux3_toggle.disable(); }
-  else if (t == "tanks/fuelPort")   { fuelPort = msg.toInt(); Serial.println(fuelPort); }
-  else if (t == "tanks/fuelStb")    { fuelStb = msg.toInt(); Serial.println(fuelStb); }
-  else if (t == "tanks/waterPort")  { waterPort = msg.toInt(); Serial.println(waterPort); }
-  else if (t == "tanks/waterStb")   { waterStb = msg.toInt(); Serial.println(waterStb); }
+  if (strcmp(topic, TOPIC_BOOSTER "/state") == 0)       { on ? wifi_toggle.enable()     : wifi_toggle.disable(); }
+  else if (strcmp(topic, TOPIC_CELL "/state") == 0)     { on ? cell_toggle.enable()     : cell_toggle.disable(); }
+  else if (strcmp(topic, TOPIC_STARLINK "/state") == 0) { on ? starlink_toggle.enable() : starlink_toggle.disable(); }
+  else if (strcmp(topic, TOPIC_B_LIGHT "/state") == 0)  { on ? b_light.enable()         : b_light.disable(); }
+  else if (strcmp(topic, TOPIC_B_FAN "/state") == 0)    { on ? b_fan.enable()           : b_fan.disable(); }
+  else if (strcmp(topic, TOPIC_DECKWASH "/state") == 0) { on ? deck_wash.enable()       : deck_wash.disable(); }
+  else if (strcmp(topic, "tanks/fuelPort") == 0)        { fuelPort = msg.toInt(); Serial.println(fuelPort); }
+  else if (strcmp(topic, "tanks/fuelStb") == 0)         { fuelStb = msg.toInt(); Serial.println(fuelStb); }
+  else if (strcmp(topic, "tanks/waterPort") == 0)       { waterPort = msg.toInt(); Serial.println(waterPort); }
+  else if (strcmp(topic, "tanks/waterStb") == 0)        { waterStb = msg.toInt(); Serial.println(waterStb); }
 
   // Optional: small log
   char logEntry[128];
@@ -147,14 +161,43 @@ inline bool wakeOnAnyTap() {
 }
 
 
+// Helper to draw a tank panel
+void drawTankPanel(int rect_a_x, int rect_a_y, int rect_b_x, int rect_b_y, int percent, bool bilge, int circle_x, int circle_y) {
+    int w = rect_b_x - rect_a_x;
+    int h = rect_b_y - rect_a_y;
+    int fill_h = (h * percent) / 100;
+    int fill_y = rect_b_y - fill_h;
+
+    // Draw main rectangle outline
+    display.drawRoundRect(rect_a_x, rect_a_y, w, h, 8, BLACK);
+
+    // Draw filled black rectangle (percent fill, from bottom up)
+    display.fillRect(rect_a_x, fill_y, w, fill_h, BLACK);
+
+    // Draw label: just percent + " %"
+    String text = String(percent) + " %";
+    display.setFont(&FreeSansBold24pt7b);
+    display.setTextColor(BLACK, WHITE);
+    display.setTextSize(1);
+    display.setCursor(rect_a_x + 10, rect_a_y - 10); // Adjust as needed
+    display.print(text);
+
+    // Draw circle (bilge indicator)
+    if (bilge)
+        display.fillCircle(circle_x, circle_y, 30, BLACK);
+    else
+        display.drawCircle(circle_x, circle_y, 30, BLACK);
+}
+
+
 void drawNetPage(){
     title.draw();
     wifi_toggle.draw();
     cell_toggle.draw();
     starlink_toggle.draw();
-    aux1_toggle.draw();
-    aux2_toggle.draw();
-    aux3_toggle.draw();
+    b_light.draw();
+    b_fan.draw();
+    deck_wash.draw();
     display.display();
 }
 
@@ -181,9 +224,44 @@ void waitClick() {
     setupToggleListener(wifi_toggle, wifi_toggle.name);
     setupToggleListener(cell_toggle, cell_toggle.name);
     setupToggleListener(starlink_toggle, starlink_toggle.name);
-    setupToggleListener(aux1_toggle, aux1_toggle.name);
-    setupToggleListener(aux2_toggle, aux2_toggle.name);
-    setupToggleListener(aux3_toggle, aux3_toggle.name);
+    setupToggleListener(b_light, b_light.name);
+    setupToggleListener(b_fan, b_fan.name);
+    setupToggleListener(deck_wash, deck_wash.name);
+}
+
+
+void showMainPage() { 
+    Serial.println("Main Page"); 
+    display.clearDisplay(); 
+    drawNetPage(); 
+}
+
+void showPage2() { 
+    Serial.println("Page 2"); 
+    display.clearDisplay();
+
+    // Set tank values before drawing
+    page.setTank(0, dp_percent);
+    page.setTank(1, ds_percent);
+    page.setTank(2, wp_percent);
+    page.setTank(3, ws_percent);
+    page.setBilge(0, bilge1);
+    page.setBilge(1, bilge2);
+    page.setBilge(2, bilge3);
+    page.setBilge(3, bilge4);
+    page.setBilge(4, bilge5);
+    page.setBilge(5, bilge6);
+    page.draw();
+    display.display();
+}
+
+
+void changePage() {
+    lastInteractionMs = millis();
+    currentPage = (currentPage == PAGE_MAIN) ? PAGE_TWO : PAGE_MAIN;
+    Serial.println("Two fingers - switch page");
+    if (currentPage == PAGE_MAIN) showMainPage();
+    else showPage2();
 }
 
 
@@ -197,64 +275,8 @@ void setup() {
   if (WiFi.status() == WL_CONNECTED) {
     log_mqtt("WiFi connected. IP address: " + WiFi.localIP().toString());
   }
-  drawNetPage();
+  showMainPage();   // <--- Use this instead of drawNetPage()
   waitClick();
-}
-
-
-void drawNextPage() {
-    // Header
-    display.setFont(&FreeSansBold24pt7b);
-    display.setTextColor(BLACK, WHITE);   // 1-bit: BLACK on WHITE
-    display.setTextSize(1);
-    display.setCursor(420, 60);
-
-    // Draw the two bitmaps in 1-bit mode
-    // (If these arrays came from image2cpp as 1-bit, this Just Works)
-    display.drawBitmap(bitmap1_x, bitmap1_y, water, bitmap1_w, bitmap1_h, BLACK);
-    display.drawBitmap(bitmap0_x, bitmap0_y, diesel, bitmap0_w, bitmap0_h, BLACK);
-
-    // Four panels (outlined rounded rectangles) in BLACK
-    const int r = 8;
-    display.drawRoundRect(rect0_a_x, rect0_a_y, rect0_b_x - rect0_a_x, rect0_b_y - rect0_a_y, r, BLACK);
-    display.drawRoundRect(rect1_a_x, rect1_a_y, rect1_b_x - rect1_a_x, rect1_b_y - rect1_a_y, r, BLACK);
-    display.drawRoundRect(rect2_a_x, rect2_a_y, rect2_b_x - rect2_a_x, rect2_b_y - rect2_a_y, r, BLACK);
-    display.drawRoundRect(rect3_a_x, rect3_a_y, rect3_b_x - rect3_a_x, rect3_b_y - rect3_a_y, r, BLACK);
-
-    // Labels (all in BLACK)
-    display.setFont(text2_font);
-    display.setCursor(text2_cursor_x, text2_cursor_y); display.print(text2_content);
-
-    display.setFont(text5_font);
-    display.setCursor(text5_cursor_x, text5_cursor_y); display.print(text5_content);
-
-    display.setFont(text3_font);
-    display.setCursor(text3_cursor_x, text3_cursor_y); display.print(text3_content);
-
-    display.setFont(text4_font);
-    display.setCursor(text4_cursor_x, text4_cursor_y); display.print(text4_content);
-
-    // // Page indicator: outline first dot, fill second
-    // display.drawCircle(circle0_center_x, circle0_center_y, circle0_radius, BLACK);
-    // display.fillCircle(circle1_center_x, circle1_center_y, circle1_radius, BLACK);
-
-    // Commit to panel
-    display.display();
-}
-
-
-void showMainPage() { display.clearDisplay(); drawNetPage(); }
-
-
-void showPage2()    { display.clearDisplay(); drawNextPage(); }
-
-
-void changePage(){
-    lastInteractionMs = millis();   // count as activity
-    currentPage = (currentPage == PAGE_MAIN) ? PAGE_TWO : PAGE_MAIN;
-    Serial.println("Two fingers - switch page");
-    if (currentPage == PAGE_MAIN) showMainPage();
-    else                          showPage2();
 }
 
 
@@ -286,8 +308,8 @@ void loop() {
     wifi_toggle.readCheckState(touchRecord.first[0]);
     cell_toggle.readCheckState(touchRecord.first[0]);
     starlink_toggle.readCheckState(touchRecord.first[0]);
-    aux1_toggle.readCheckState(touchRecord.first[0]);
-    aux2_toggle.readCheckState(touchRecord.first[0]);
-    aux3_toggle.readCheckState(touchRecord.first[0]);
+    b_light.readCheckState(touchRecord.first[0]);
+    b_fan.readCheckState(touchRecord.first[0]);
+    deck_wash.readCheckState(touchRecord.first[0]);
   }
 }

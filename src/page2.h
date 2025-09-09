@@ -100,7 +100,7 @@ const uint8_t diesel[] PROGMEM = {
   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 };
 
-int rect0_a_x = 100;
+const int rect0_a_x = 100;
 int rect0_a_y = 220;
 int rect0_b_x = rect0_a_x + 140;
 int rect0_b_y = rect0_a_y + 260;
@@ -152,19 +152,20 @@ int text5_cursor_x = text2_cursor_x + rect3_a_x - 100;
 int text5_cursor_y = text2_cursor_y;
 const GFXfont *text5_font = &FreeSansBold24pt7b;
 
-// int circle0_center_x = 428;
-// int circle0_center_y = 720;
-// int circle0_fill = 1;
-// int circle0_radius = 10;
-// int circle0_color = 0;
+const int circle0_center_x = 145;
+const int circle_center_y = 670;
+int circle0_fill = 1;
+const int circle_radius = 30;
+const int circle_color = 0;
 
-// int circle1_center_x = 493;
-// int circle1_center_y = 720;
-// int circle1_fill = -1;
-// int circle1_radius = 10;
-// int circle1_color = 0;
+int circle1_fill = 1;
+int circle2_fill = 1;
+int circle3_fill = 1;
+int circle4_fill = 1;
+int circle5_fill = 1;
 
 void mainDraw() {
+
     display.drawBitmap3Bit(bitmap0_x, bitmap0_y, diesel, bitmap0_w, bitmap0_h);
     display.drawBitmap3Bit(bitmap1_x, bitmap1_y, water, bitmap1_w, bitmap1_h);
     if (rect0_radius != -1 && rect0_fill != -1)
@@ -202,7 +203,7 @@ void mainDraw() {
        display.fillRect(rect3_a_x, rect3_a_y, rect3_b_x - rect3_a_x, rect3_b_y - rect3_a_y, rect3_color);
    else if (rect3_radius == -1 && rect3_fill == -1)
        display.drawRect(rect3_a_x, rect3_a_y, rect3_b_x - rect3_a_x, rect3_b_y - rect3_a_y, rect3_color);
-
+           
     display.setFont(text2_font);
     display.setTextColor(0, 7);    display.setTextSize(1);    display.setCursor(text2_cursor_x, text2_cursor_y);
     display.print(text2_content);
@@ -219,14 +220,38 @@ void mainDraw() {
     display.setTextColor(0, 7);    display.setTextSize(1);    display.setCursor(text5_cursor_x, text5_cursor_y);
     display.print(text5_content);
 
-//     if (circle0_fill != -1)
-//        display.fillCircle(circle0_center_x, circle0_center_y, circle0_radius, circle0_color);
-//    else
-//        display.drawCircle(circle0_center_x, circle0_center_y, circle0_radius, circle0_color);
-
-//     if (circle1_fill != -1)
-//        display.fillCircle(circle1_center_x, circle1_center_y, circle1_radius, circle1_color);
-//    else
-//        display.drawCircle(circle1_center_x, circle1_center_y, circle1_radius, circle1_color);
-
 }
+
+void draw_pumps() {
+
+    if (circle0_fill != -1)
+    display.fillCircle(circle0_center_x, circle_center_y, circle_radius, circle_color);
+    else
+    display.drawCircle(circle0_center_x, circle_center_y, circle_radius, circle_color);
+
+    if (circle1_fill != -1)
+    display.fillCircle(circle0_center_x * 2, circle_center_y, circle_radius, circle_color);
+    else
+    display.drawCircle(circle0_center_x * 2, circle_center_y, circle_radius, circle_color);
+    
+    if (circle2_fill != -1)
+    display.fillCircle(circle0_center_x * 3, circle_center_y, circle_radius, circle_color);
+    else
+    display.drawCircle(circle0_center_x * 3, circle_center_y, circle_radius, circle_color);
+
+    if (circle3_fill != -1)
+    display.fillCircle(circle0_center_x * 4, circle_center_y, circle_radius, circle_color);
+    else
+    display.drawCircle(circle0_center_x * 4, circle_center_y, circle_radius, circle_color);
+
+    if (circle4_fill != -1)
+    display.fillCircle(circle0_center_x * 5, circle_center_y, circle_radius, circle_color);
+    else
+    display.drawCircle(circle0_center_x * 5, circle_center_y, circle_radius, circle_color);
+
+    if (circle5_fill != -1)
+    display.fillCircle(circle0_center_x * 6, circle_center_y, circle_radius, circle_color);
+    else
+    display.drawCircle(circle0_center_x * 6, circle_center_y, circle_radius, circle_color);
+}
+
