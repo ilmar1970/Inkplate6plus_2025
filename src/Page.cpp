@@ -3,10 +3,8 @@
 
 const int Page::rect_a_x[Page::tankCount] = {150, 320, 554, 734}; // 50
 const int Page::rect_b_x[Page::tankCount] = {290, 470, 694, 874}; 
-//const int Page::circle_x[Page::tankCount] = {145, 290, 580, 725};
 const int Page::rect_a_y = 220;
 const int Page::rect_b_y = 480;
-//const int Page::circle_y = 670;
 // Bilge circle positions and radius
 const int Page::bilge_x[Page::bilgeCount] = {70, 70, 70, 950, 950, 950};
 const int Page::bilge_y[Page::bilgeCount] = {245, 435, 625, 245, 435, 625};
@@ -103,4 +101,5 @@ void Page::drawBilge(int idx) {
         display.fillCircle(x, y, r, BLACK);
     else
         display.drawCircle(x, y, r, BLACK);
+    display.partialUpdate();
 }

@@ -40,14 +40,19 @@ Inkplate display(INKPLATE_1BIT);
 Page page(display);
 Display::Text title("SeaEsta", {400, 80}, 2);
 Display::Toggle wifi_toggle("Booster", TOPIC_BOOSTER, {100, 200});
-Display::Toggle cell_toggle("Cell", TOPIC_CELL, {100, 400});
-Display::Toggle starlink_toggle("Starlink", TOPIC_STARLINK, {100, 600});
-Display::Toggle b_light("BatLight", TOPIC_B_LIGHT, {600, 200});
-Display::Toggle b_fan("BatFan", TOPIC_B_FAN, {600, 400});
-Display::Toggle deck_wash("AUX3", TOPIC_DECKWASH, {600, 600});
+Display::Toggle cell_toggle("Cell", TOPIC_CELL, {100, 350});
+Display::Toggle starlink_toggle("Starlink", TOPIC_STARLINK, {100, 500});
+Display::Toggle ac_port_toggle("AC_Fl_Port", TOPIC_AC_PORT, {100, 650});
+
+Display::Toggle b_light("B_Light", TOPIC_B_LIGHT, {600, 200});
+Display::Toggle b_fan("B_Fan", TOPIC_B_FAN, {600, 350});
+Display::Toggle deck_wash("DeckFresh", TOPIC_DECKWASH, {600, 500});
+Display::Toggle ac_strb_toggle("AC_Fl_Stb", TOPIC_AC_STRB, {600, 650});
 
 WiFiClient espClient;
+
 PubSubClient client(espClient);
+
 
 void log_mqtt(const String& msg, bool error=false) {
   if (error) {
@@ -103,6 +108,8 @@ void callback(char* topic, byte* payload, unsigned int length) {
     else if (strcmp(t, "inkplate/control/batlight/state") == 0) { on ? b_light.enable()         : b_light.disable(); }
     else if (strcmp(t, "inkplate/control/batfan/state") == 0)   { on ? b_fan.enable()           : b_fan.disable(); }
     else if (strcmp(t, "inkplate/control/deckwash/state") == 0) { on ? deck_wash.enable()       : deck_wash.disable(); }
+    else if (strcmp(t, "inkplate/control/acport/state") == 0) { on ? ac_port_toggle.enable() : ac_port_toggle.disable(); }
+    else if (strcmp(t, "inkplate/control/acstrb/state") == 0) { on ? ac_strb_toggle.enable() : ac_strb_toggle.disable(); }
     else if (strcmp(t, "tanks/fuelport") == 0) {
         fuelPort = atoi(start);
         page.setTank(0, fuelPort);
@@ -127,7 +134,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
         page.setBilge(0, on);
         if (currentPage == PAGE_TWO) page.drawBilge(0);
     }
-    else if (strcmp(t, "inkplate/pumps/stbfwd") == 0)   {
+    else if (strcmp(t, "inkplate/pumps/portmid") == 0)   {
         page.setBilge(1, on);
         if (currentPage == PAGE_TWO) page.drawBilge(1);
     }
@@ -135,7 +142,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
         page.setBilge(2, on);
         if (currentPage == PAGE_TWO) page.drawBilge(2);
     }
-    else if (strcmp(t, "inkplate/pumps/portmid") == 0)  {
+    else if (strcmp(t, "inkplate/pumps/stbfwd") == 0)  {
         page.setBilge(3, on);
         if (currentPage == PAGE_TWO) page.drawBilge(3);
     }
@@ -208,35 +215,6 @@ inline bool wakeOnAnyTap() {
 }
 
 
-// Helper to draw a tank panel
-// void drawTankPanel(int rect_a_x, int rect_a_y, int rect_b_x, int rect_b_y, int percent, bool bilge, int circle_x, int circle_y) {
-//     int w = rect_b_x - rect_a_x;
-//     int h = rect_b_y - rect_a_y;
-//     int fill_h = (h * percent) / 100;
-//     int fill_y = rect_b_y - fill_h;
-
-//     // Draw main rectangle outline
-//     display.drawRoundRect(rect_a_x, rect_a_y, w, h, 8, BLACK);
-
-//     // Draw filled black rectangle (percent fill, from bottom up)
-//     display.fillRect(rect_a_x, fill_y, w, fill_h, BLACK);
-
-//     // Draw label: just percent + " %"
-//     String text = String(percent) + " %";
-//     display.setFont(&FreeSansBold24pt7b);
-//     display.setTextColor(BLACK, WHITE);
-//     display.setTextSize(1);
-//     display.setCursor(rect_a_x + 10, rect_a_y - 10); // Adjust as needed
-//     display.print(text);
-
-//     // Draw circle (bilge indicator)
-//     if (bilge)
-//         display.fillCircle(circle_x, circle_y, 30, BLACK);
-//     else
-//         display.drawCircle(circle_x, circle_y, 30, BLACK);
-// }
-
-
 void drawNetPage(){
     title.draw();
     wifi_toggle.draw();
@@ -245,6 +223,8 @@ void drawNetPage(){
     b_light.draw();
     b_fan.draw();
     deck_wash.draw();
+    ac_port_toggle.draw();
+    ac_strb_toggle.draw();
     display.display();
 }
 
@@ -274,6 +254,8 @@ void waitClick() {
     setupToggleListener(b_light, b_light.name);
     setupToggleListener(b_fan, b_fan.name);
     setupToggleListener(deck_wash, deck_wash.name);
+    setupToggleListener(ac_port_toggle, ac_port_toggle.name);
+    setupToggleListener(ac_strb_toggle, ac_strb_toggle.name);
 }
 
 
@@ -346,5 +328,7 @@ void loop() {
     b_light.readCheckState(touchRecord.first[0]);
     b_fan.readCheckState(touchRecord.first[0]);
     deck_wash.readCheckState(touchRecord.first[0]);
+    ac_port_toggle.readCheckState(touchRecord.first[0]);
+    ac_strb_toggle.readCheckState(touchRecord.first[0]);
   }
 }
