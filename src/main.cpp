@@ -209,32 +209,32 @@ inline bool wakeOnAnyTap() {
 
 
 // Helper to draw a tank panel
-void drawTankPanel(int rect_a_x, int rect_a_y, int rect_b_x, int rect_b_y, int percent, bool bilge, int circle_x, int circle_y) {
-    int w = rect_b_x - rect_a_x;
-    int h = rect_b_y - rect_a_y;
-    int fill_h = (h * percent) / 100;
-    int fill_y = rect_b_y - fill_h;
+// void drawTankPanel(int rect_a_x, int rect_a_y, int rect_b_x, int rect_b_y, int percent, bool bilge, int circle_x, int circle_y) {
+//     int w = rect_b_x - rect_a_x;
+//     int h = rect_b_y - rect_a_y;
+//     int fill_h = (h * percent) / 100;
+//     int fill_y = rect_b_y - fill_h;
 
-    // Draw main rectangle outline
-    display.drawRoundRect(rect_a_x, rect_a_y, w, h, 8, BLACK);
+//     // Draw main rectangle outline
+//     display.drawRoundRect(rect_a_x, rect_a_y, w, h, 8, BLACK);
 
-    // Draw filled black rectangle (percent fill, from bottom up)
-    display.fillRect(rect_a_x, fill_y, w, fill_h, BLACK);
+//     // Draw filled black rectangle (percent fill, from bottom up)
+//     display.fillRect(rect_a_x, fill_y, w, fill_h, BLACK);
 
-    // Draw label: just percent + " %"
-    String text = String(percent) + " %";
-    display.setFont(&FreeSansBold24pt7b);
-    display.setTextColor(BLACK, WHITE);
-    display.setTextSize(1);
-    display.setCursor(rect_a_x + 10, rect_a_y - 10); // Adjust as needed
-    display.print(text);
+//     // Draw label: just percent + " %"
+//     String text = String(percent) + " %";
+//     display.setFont(&FreeSansBold24pt7b);
+//     display.setTextColor(BLACK, WHITE);
+//     display.setTextSize(1);
+//     display.setCursor(rect_a_x + 10, rect_a_y - 10); // Adjust as needed
+//     display.print(text);
 
-    // Draw circle (bilge indicator)
-    if (bilge)
-        display.fillCircle(circle_x, circle_y, 30, BLACK);
-    else
-        display.drawCircle(circle_x, circle_y, 30, BLACK);
-}
+//     // Draw circle (bilge indicator)
+//     if (bilge)
+//         display.fillCircle(circle_x, circle_y, 30, BLACK);
+//     else
+//         display.drawCircle(circle_x, circle_y, 30, BLACK);
+// }
 
 
 void drawNetPage(){

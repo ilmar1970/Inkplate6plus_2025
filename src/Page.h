@@ -2,6 +2,7 @@
 #include "Arduino.h"
 #include "Inkplate.h"
 #include "Fonts/FreeSansBold24pt7b.h"
+#include "icons.h"
 
 class Page {
 public:
@@ -37,7 +38,4 @@ private:
     static const int circle_y;
     static constexpr int circle_radius = 30;
 
-    // Bitmaps (declare, define in .cpp)
-    static const uint8_t water[];
-    static const uint8_t diesel[];
 };
