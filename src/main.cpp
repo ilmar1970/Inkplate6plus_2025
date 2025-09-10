@@ -15,9 +15,10 @@
 #define TOPIC_B_LIGHT "inkplate/control/batlight"
 #define TOPIC_B_FAN "inkplate/control/batfan"
 #define TOPIC_DECKWASH "inkplate/control/deckwash"
-#define TOPIC_TANK "tanks/#"
+#define TOPIC_TANKS "tanks/#"
 #define TOPIC_AC_PORT "inkplate/control/acport"
 #define TOPIC_AC_STRB "inkplate/control/acstrb"
+#define TOPIC_PUMPS "inkplate/pumps/#"
 
 // --- Backlight control ---
 constexpr uint32_t BACKLIGHT_TIMEOUT_MS = 60000; // 60s (adjust as you like)
@@ -36,16 +37,16 @@ int waterPort = 0;
 int waterStb = 0;
 
 // Example dynamic variables for each tank
-int dp_percent = 75; // 0..100
-int ds_percent = 50;
-int wp_percent = 30;
-int ws_percent = 90;
-bool bilge1 = true;
-bool bilge2 = false;
-bool bilge3 = true;
-bool bilge4 = false;
-bool bilge5 = false;
-bool bilge6 = false;
+// int dp_percent = 75; // 0..100
+// int ds_percent = 50;
+// int wp_percent = 30;
+// int ws_percent = 90;
+// bool bilge1 = true;
+// bool bilge2 = false;
+// bool bilge3 = true;
+// bool bilge4 = false;
+// bool bilge5 = false;
+// bool bilge6 = false;
 
 Inkplate display(INKPLATE_1BIT);
 Page page(display);
@@ -81,31 +82,54 @@ void setup_wifi() {
 
 
 void callback(char* topic, byte* payload, unsigned int length) {
-  String msg;
-  msg.reserve(length);
-  for (unsigned int i = 0; i < length; i++) msg += (char)payload[i];
+    // --- Convert payload to lowercase, trimmed C-string ---
+    char msg[32]; // Adjust size as needed for your payloads
+    unsigned int copyLen = (length < sizeof(msg) - 1) ? length : sizeof(msg) - 1;
+    memcpy(msg, payload, copyLen);
+    msg[copyLen] = '\0';
 
-  // normalize
-  String t = topic;
-  msg.trim(); msg.toLowerCase();
-  bool on = (msg == "1" || msg == "true" || msg == "on");
+    // Trim leading/trailing whitespace
+    char* start = msg;
+    while (*start && isspace((unsigned char)*start)) ++start;
+    char* end = msg + strlen(msg) - 1;
+    while (end > start && isspace((unsigned char)*end)) *end-- = '\0';
 
-  // Route by exact /state topic
-  if (strcmp(topic, TOPIC_BOOSTER "/state") == 0)       { on ? wifi_toggle.enable()     : wifi_toggle.disable(); }
-  else if (strcmp(topic, TOPIC_CELL "/state") == 0)     { on ? cell_toggle.enable()     : cell_toggle.disable(); }
-  else if (strcmp(topic, TOPIC_STARLINK "/state") == 0) { on ? starlink_toggle.enable() : starlink_toggle.disable(); }
-  else if (strcmp(topic, TOPIC_B_LIGHT "/state") == 0)  { on ? b_light.enable()         : b_light.disable(); }
-  else if (strcmp(topic, TOPIC_B_FAN "/state") == 0)    { on ? b_fan.enable()           : b_fan.disable(); }
-  else if (strcmp(topic, TOPIC_DECKWASH "/state") == 0) { on ? deck_wash.enable()       : deck_wash.disable(); }
-  else if (strcmp(topic, "tanks/fuelPort") == 0)        { fuelPort = msg.toInt(); Serial.println(fuelPort); }
-  else if (strcmp(topic, "tanks/fuelStb") == 0)         { fuelStb = msg.toInt(); Serial.println(fuelStb); }
-  else if (strcmp(topic, "tanks/waterPort") == 0)       { waterPort = msg.toInt(); Serial.println(waterPort); }
-  else if (strcmp(topic, "tanks/waterStb") == 0)        { waterStb = msg.toInt(); Serial.println(waterStb); }
+    // Lowercase payload
+    for (char* p = start; *p; ++p) *p = tolower((unsigned char)*p);
 
-  // Optional: small log
-  char logEntry[128];
-  snprintf(logEntry, sizeof(logEntry), "STATE [%s] <= %s", topic, msg.c_str());
-  log_mqtt(logEntry);
+    // --- Convert topic to lowercase C-string for case-insensitive matching ---
+    char t[64]; // Adjust size as needed for your topics
+    strncpy(t, topic, sizeof(t) - 1);
+    t[sizeof(t) - 1] = '\0';
+    for (char* p = t; *p; ++p) *p = tolower((unsigned char)*p);
+
+    // Parse payload as boolean, start is pointer on msg
+    bool on = (strcmp(start, "1") == 0 || strcmp(start, "true") == 0 || strcmp(start, "on") == 0);
+
+    Serial.printf("MQTT msg [%s] => %s\n", topic, start);
+
+    // --- Topic routing ---
+    if (strcmp(t, "inkplate/control/booster/state") == 0)       { on ? wifi_toggle.enable()     : wifi_toggle.disable(); }
+    else if (strcmp(t, "inkplate/control/cell/state") == 0)     { on ? cell_toggle.enable()     : cell_toggle.disable(); }
+    else if (strcmp(t, "inkplate/control/starlink/state") == 0) { on ? starlink_toggle.enable() : starlink_toggle.disable(); }
+    else if (strcmp(t, "inkplate/control/batlight/state") == 0) { on ? b_light.enable()         : b_light.disable(); }
+    else if (strcmp(t, "inkplate/control/batfan/state") == 0)   { on ? b_fan.enable()           : b_fan.disable(); }
+    else if (strcmp(t, "inkplate/control/deckwash/state") == 0) { on ? deck_wash.enable()       : deck_wash.disable(); }
+    else if (strcmp(t, "tanks/fuelport") == 0)        { fuelPort = atoi(start);  page.setTank(0, fuelPort); }
+    else if (strcmp(t, "tanks/fuelstb") == 0)         { fuelStb = atoi(start);   page.setTank(1, fuelStb); }
+    else if (strcmp(t, "tanks/waterport") == 0)       { waterPort = atoi(start); page.setTank(2, waterPort); }
+    else if (strcmp(t, "tanks/waterstb") == 0)        { waterStb = atoi(start);  page.setTank(3, waterStb); }
+    else if (strcmp(t, "inkplate/pumps/portfwd") == 0)  { page.setBilge(0, on); }
+    else if (strcmp(t, "inkplate/pumps/stbfwd") == 0)   { page.setBilge(1, on); }
+    else if (strcmp(t, "inkplate/pumps/porteng") == 0)  { page.setBilge(2, on); }
+    else if (strcmp(t, "inkplate/pumps/portmid") == 0)  { page.setBilge(3, on); }
+    else if (strcmp(t, "inkplate/pumps/stbmid") == 0)   { page.setBilge(4, on); }
+    else if (strcmp(t, "inkplate/pumps/stbeng") == 0)   { page.setBilge(5, on); }
+
+    // Optional: small log
+    char logEntry[128];
+    snprintf(logEntry, sizeof(logEntry), "STATE [%s] <= %s", topic, start);
+    log_mqtt(logEntry);
 }
 
 
@@ -115,7 +139,8 @@ void reconnect() {
     if (client.connect(client_id, mqtt_user, mqtt_pass)) {
       Serial.println("connected");
       client.subscribe(TOPIC_SUB);
-      client.subscribe(TOPIC_TANK);
+      client.subscribe(TOPIC_TANKS);
+      client.subscribe(TOPIC_PUMPS);
       IPAddress ip = WiFi.localIP();
       String ipStr = ip.toString();
       client.publish(TOPIC_IP, ipStr.c_str());
@@ -239,18 +264,6 @@ void showMainPage() {
 void showPage2() { 
     Serial.println("Page 2"); 
     display.clearDisplay();
-
-    // Set tank values before drawing
-    page.setTank(0, dp_percent);
-    page.setTank(1, ds_percent);
-    page.setTank(2, wp_percent);
-    page.setTank(3, ws_percent);
-    page.setBilge(0, bilge1);
-    page.setBilge(1, bilge2);
-    page.setBilge(2, bilge3);
-    page.setBilge(3, bilge4);
-    page.setBilge(4, bilge5);
-    page.setBilge(5, bilge6);
     page.draw();
     display.display();
 }

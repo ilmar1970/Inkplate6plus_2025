@@ -106,8 +106,8 @@ const uint8_t Page::diesel[] PROGMEM = {
   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 };
 
-const int Page::rect_a_x[Page::tankCount] = {100, 280, 684, 864};
-const int Page::rect_b_x[Page::tankCount] = {240, 420, 824, 1004};
+const int Page::rect_a_x[Page::tankCount] = {100, 280, 604, 784}; // -80
+const int Page::rect_b_x[Page::tankCount] = {240, 420, 744, 924}; // -80
 const int Page::circle_x[Page::tankCount] = {145, 290, 580, 725};
 const int Page::rect_a_y = 220;
 const int Page::rect_b_y = 480;
@@ -155,7 +155,7 @@ void Page::draw() {
         display.setFont(&FreeSansBold24pt7b);
         display.setTextColor(BLACK, WHITE);
         display.setTextSize(1);
-        display.setCursor(rect_a_x[i] + 10, rect_a_y - 10);
+        display.setCursor(rect_a_x[i] + 20, rect_a_y - 10);
         display.print(label);
     }
     // Draw bilge circles
