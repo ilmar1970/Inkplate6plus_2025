@@ -13,6 +13,8 @@ public:
 
     // Draw the page
     void draw();
+    void drawTank(int idx);
+    void drawBilge(int idx);
 
 private:
     Inkplate& display;

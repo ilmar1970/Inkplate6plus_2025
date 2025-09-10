@@ -36,18 +36,6 @@ int fuelStb = 0;
 int waterPort = 0;
 int waterStb = 0;
 
-// Example dynamic variables for each tank
-// int dp_percent = 75; // 0..100
-// int ds_percent = 50;
-// int wp_percent = 30;
-// int ws_percent = 90;
-// bool bilge1 = true;
-// bool bilge2 = false;
-// bool bilge3 = true;
-// bool bilge4 = false;
-// bool bilge5 = false;
-// bool bilge6 = false;
-
 Inkplate display(INKPLATE_1BIT);
 Page page(display);
 Display::Text title("SeaEsta", {400, 80}, 2);
@@ -115,16 +103,50 @@ void callback(char* topic, byte* payload, unsigned int length) {
     else if (strcmp(t, "inkplate/control/batlight/state") == 0) { on ? b_light.enable()         : b_light.disable(); }
     else if (strcmp(t, "inkplate/control/batfan/state") == 0)   { on ? b_fan.enable()           : b_fan.disable(); }
     else if (strcmp(t, "inkplate/control/deckwash/state") == 0) { on ? deck_wash.enable()       : deck_wash.disable(); }
-    else if (strcmp(t, "tanks/fuelport") == 0)        { fuelPort = atoi(start);  page.setTank(0, fuelPort); }
-    else if (strcmp(t, "tanks/fuelstb") == 0)         { fuelStb = atoi(start);   page.setTank(1, fuelStb); }
-    else if (strcmp(t, "tanks/waterport") == 0)       { waterPort = atoi(start); page.setTank(2, waterPort); }
-    else if (strcmp(t, "tanks/waterstb") == 0)        { waterStb = atoi(start);  page.setTank(3, waterStb); }
-    else if (strcmp(t, "inkplate/pumps/portfwd") == 0)  { page.setBilge(0, on); }
-    else if (strcmp(t, "inkplate/pumps/stbfwd") == 0)   { page.setBilge(1, on); }
-    else if (strcmp(t, "inkplate/pumps/porteng") == 0)  { page.setBilge(2, on); }
-    else if (strcmp(t, "inkplate/pumps/portmid") == 0)  { page.setBilge(3, on); }
-    else if (strcmp(t, "inkplate/pumps/stbmid") == 0)   { page.setBilge(4, on); }
-    else if (strcmp(t, "inkplate/pumps/stbeng") == 0)   { page.setBilge(5, on); }
+    else if (strcmp(t, "tanks/fuelport") == 0) {
+        fuelPort = atoi(start);
+        page.setTank(0, fuelPort);
+        if (currentPage == PAGE_TWO) page.drawTank(0);
+    }
+    else if (strcmp(t, "tanks/fuelstb") == 0) {
+        fuelStb = atoi(start);
+        page.setTank(1, fuelStb);
+        if (currentPage == PAGE_TWO) page.drawTank(1);
+    }
+    else if (strcmp(t, "tanks/waterport") == 0) {
+        waterPort = atoi(start);
+        page.setTank(2, waterPort);
+        if (currentPage == PAGE_TWO) page.drawTank(2);
+    }
+    else if (strcmp(t, "tanks/waterstb") == 0) {
+        waterStb = atoi(start);
+        page.setTank(3, waterStb);
+        if (currentPage == PAGE_TWO) page.drawTank(3);
+    }
+    else if (strcmp(t, "inkplate/pumps/portfwd") == 0)  {
+        page.setBilge(0, on);
+        if (currentPage == PAGE_TWO) page.drawBilge(0);
+    }
+    else if (strcmp(t, "inkplate/pumps/stbfwd") == 0)   {
+        page.setBilge(1, on);
+        if (currentPage == PAGE_TWO) page.drawBilge(1);
+    }
+    else if (strcmp(t, "inkplate/pumps/porteng") == 0)  {
+        page.setBilge(2, on);
+        if (currentPage == PAGE_TWO) page.drawBilge(2);
+    }
+    else if (strcmp(t, "inkplate/pumps/portmid") == 0)  {
+        page.setBilge(3, on);
+        if (currentPage == PAGE_TWO) page.drawBilge(3);
+    }
+    else if (strcmp(t, "inkplate/pumps/stbmid") == 0)   {
+        page.setBilge(4, on);
+        if (currentPage == PAGE_TWO) page.drawBilge(4);
+    }
+    else if (strcmp(t, "inkplate/pumps/stbeng") == 0)   {
+        page.setBilge(5, on);
+        if (currentPage == PAGE_TWO) page.drawBilge(5);
+    }
 
     // Optional: small log
     char logEntry[128];
