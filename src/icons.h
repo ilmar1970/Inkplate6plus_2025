@@ -3,3 +3,4 @@
 
 extern const uint8_t water[];
 extern const uint8_t diesel[];
+extern const uint8_t bilge[];

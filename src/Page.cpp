@@ -1,15 +1,15 @@
 #include "Page.h"
 #include "icons.h" 
 
-const int Page::rect_a_x[Page::tankCount] = {100, 280, 604, 784}; // -80
-const int Page::rect_b_x[Page::tankCount] = {240, 420, 744, 924}; // -80
-const int Page::circle_x[Page::tankCount] = {145, 290, 580, 725};
+const int Page::rect_a_x[Page::tankCount] = {150, 320, 554, 734}; // 50
+const int Page::rect_b_x[Page::tankCount] = {290, 470, 694, 874}; 
+//const int Page::circle_x[Page::tankCount] = {145, 290, 580, 725};
 const int Page::rect_a_y = 220;
 const int Page::rect_b_y = 480;
-const int Page::circle_y = 670;
+//const int Page::circle_y = 670;
 // Bilge circle positions and radius
-const int Page::bilge_x[Page::bilgeCount] = {145, 290, 435, 580, 725, 870};
-const int Page::bilge_y[Page::bilgeCount] = {670, 670, 670, 670, 670, 670};
+const int Page::bilge_x[Page::bilgeCount] = {70, 70, 70, 950, 950, 950};
+const int Page::bilge_y[Page::bilgeCount] = {245, 435, 625, 245, 435, 625};
 
 Page::Page(Inkplate& disp) : display(disp) {
     for (int i = 0; i < tankCount; ++i) {
@@ -28,8 +28,10 @@ void Page::setBilge(int idx, bool state) {
 }
 
 void Page::draw() {
-    display.drawBitmap(230, 65, water, 60, 60, BLACK);
-    display.drawBitmap(744, 65, diesel, 60, 60, BLACK);
+    display.drawBitmap(280, 65, water, 60, 60, BLACK);
+    display.drawBitmap(694, 65, diesel, 60, 60, BLACK);
+    display.drawBitmap(30, 70, bilge, 80, 60, BLACK);
+    display.drawBitmap(910, 70, bilge, 80, 60, BLACK);
 
     // Draw tanks
     for (int i = 0; i < tankCount; ++i) {
