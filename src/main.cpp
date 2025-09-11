@@ -31,6 +31,10 @@ static uint32_t wakeGuardUntilMs  = 0; // swallow touches right after wake
 //bool nextPage = false; // page number
 enum Page2 { PAGE_MAIN, PAGE_TWO };
 static Page2 currentPage = PAGE_MAIN;
+
+static uint32_t lastRedrawMs = 0;
+constexpr uint32_t FULL_REDRAW_INTERVAL_MS = 300000; // 5 minutes
+
 int fuelPort = 0;
 int fuelStb = 0;
 int waterPort = 0;
@@ -318,17 +322,34 @@ void loop() {
       backlightOn = false;
   }
   
-  std::pair<DisplayCoordinates*, uint16_t> touchRecord = Display::readTouchData();
+  auto touchRecord = Display::readTouchData();
   if (touchRecord.second > 1) {
     changePage();
-  } else if (touchRecord.second == 1 && currentPage == PAGE_MAIN) {
-    wifi_toggle.readCheckState(touchRecord.first[0]);
-    cell_toggle.readCheckState(touchRecord.first[0]);
-    starlink_toggle.readCheckState(touchRecord.first[0]);
-    b_light.readCheckState(touchRecord.first[0]);
-    b_fan.readCheckState(touchRecord.first[0]);
-    deck_wash.readCheckState(touchRecord.first[0]);
-    ac_port_toggle.readCheckState(touchRecord.first[0]);
-    ac_strb_toggle.readCheckState(touchRecord.first[0]);
+  } else if (touchRecord.second == 1 && touchRecord.first != nullptr && currentPage == PAGE_MAIN) {
+    wifi_toggle.readCheckState(*touchRecord.first);
+    cell_toggle.readCheckState(*touchRecord.first);
+    starlink_toggle.readCheckState(*touchRecord.first);
+    b_light.readCheckState(*touchRecord.first);
+    b_fan.readCheckState(*touchRecord.first);
+    deck_wash.readCheckState(*touchRecord.first);
+    ac_port_toggle.readCheckState(*touchRecord.first);
+    ac_strb_toggle.readCheckState(*touchRecord.first);
+  }
+  else {
+    wifi_toggle.resetPress();
+    cell_toggle.resetPress();
+    starlink_toggle.resetPress();
+    b_light.resetPress();
+    b_fan.resetPress();
+    deck_wash.resetPress();
+    ac_port_toggle.resetPress();
+    ac_strb_toggle.resetPress();
+  }
+
+  // Full redraw every 5 minutes
+  if (millis() - lastRedrawMs > FULL_REDRAW_INTERVAL_MS) {
+      lastRedrawMs = millis();
+      if (currentPage == PAGE_MAIN) showMainPage();
+      else showPage2();
   }
 }

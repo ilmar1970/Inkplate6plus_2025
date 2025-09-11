@@ -56,6 +56,7 @@ namespace Display {
             void readCheckState(DisplayCoordinates touchCoordinates, const OnClickListener<Toggle*>& customOnClickListener = nullptr);
             void enable(bool is_partial=true);
             void disable(bool is_partial=true);
+            void resetPress();
     };
 }
 

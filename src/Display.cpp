@@ -67,9 +67,9 @@ void Display::Toggle::readCheckState(DisplayCoordinates touchCoordinates, const 
     bool pressed = false;
     int xbr = rectPosition.first + 85;
     int ybr = rectPosition.second + 42;
-    //Serial.printf("Touch at (%d,%d); Rect at (%d,%d)-(%d,%d)\n",
-    //              touchCoordinates.first, touchCoordinates.second,
-    //              rectPosition.first, rectPosition.second, xbr, ybr);
+    Serial.printf("Touch at (%d,%d); Rect at (%d,%d)-(%d,%d)\n",
+                 touchCoordinates.first, touchCoordinates.second,
+                 rectPosition.first, rectPosition.second, xbr, ybr);
     if (touchCoordinates.first >= rectPosition.first && touchCoordinates.first <= xbr &&
         touchCoordinates.second <= ybr && touchCoordinates.second >= rectPosition.second) {
         pressed = true;
@@ -81,16 +81,21 @@ void Display::Toggle::readCheckState(DisplayCoordinates touchCoordinates, const 
     wasPressed = pressed;
 }
 
+void Display::Toggle::resetPress() {
+    wasPressed = false;
+}
+
 std::pair<DisplayCoordinates*, uint16_t> Display::readTouchData() {
     static DisplayCoordinates touchEvent;
     uint16_t n = 0;
     uint16_t x[2], y[2];
     if (display->tsAvailable()){
         n = display->tsGetData(x, y);
-        // if (n != 0) { Serial.println(n); }
         for (int i = 0; i < n && i < 2; i++) {
             touchEvent = {x[i], y[i]};
         }
+        return {&touchEvent, n};
     }
-    return {&touchEvent, n};
+    // No touch: return nullptr and n=0
+    return {nullptr, 0};
 }
