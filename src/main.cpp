@@ -35,6 +35,9 @@ static Page2 currentPage = PAGE_MAIN;
 static uint32_t lastRedrawMs = 0;
 constexpr uint32_t FULL_REDRAW_INTERVAL_MS = 300000; // 5 minutes
 
+static uint32_t lastTempMs = 0;
+constexpr uint32_t TEMP_INTERVAL_MS = 60000; // every 60 seconds
+
 int fuelPort = 0;
 int fuelStb = 0;
 int waterPort = 0;
@@ -102,8 +105,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
 
     // Parse payload as boolean, start is pointer on msg
     bool on = (strcmp(start, "1") == 0 || strcmp(start, "true") == 0 || strcmp(start, "on") == 0);
-
-    Serial.printf("MQTT msg [%s] => %s\n", topic, start);
+    // Serial.printf("MQTT msg [%s] => %s\n", topic, start);
 
     // --- Topic routing ---
     if (strcmp(t, "inkplate/control/booster/state") == 0)       { on ? wifi_toggle.enable()     : wifi_toggle.disable(); }
@@ -236,18 +238,16 @@ void drawNetPage(){
 void setupToggleListener(Display::Toggle& toggle, const char* topic) {
     // topic is the command topic, e.g. "inkplate/control/aux1"
     toggle.onClickListener = [topic](Display::Toggle* t) {
-        // If we just woke the light, ignore this press
-        if (millis() < wakeGuardUntilMs) return;
-        lastInteractionMs = millis(); // real interaction happened
-        // invert current UI state -> command payload
-        const char* payload = t->state ? "0" : "1";
-        // publish command (NOT retained)
-        bool ok = client.publish(topic, payload, /*retain=*/false);
-        // Optional: log command
-        String s = String("CMD [") + topic + "] => " + payload + (ok ? "" : " (fail)");
-        log_mqtt(s.c_str());
-        // DO NOT change UI here. Wait for "<topic>/state" to arrive and set UI.
-    };
+    if (millis() < wakeGuardUntilMs) return;
+    lastInteractionMs = millis();
+    const char* payload = t->state ? "0" : "1";
+    bool ok = client.publish(topic, payload, false);
+    String s = String("CMD [") + topic + "] => " + payload + (ok ? "" : " (fail)");
+    log_mqtt(s.c_str());
+
+    // Immediately clear the button area (show pending)
+    t->clearButtonArea();
+};
 }
 
 
@@ -264,16 +264,31 @@ void waitClick() {
 
 
 void showMainPage() { 
-    Serial.println("Main Page"); 
+    // Serial.println("Main Page"); 
     display.clearDisplay(); 
     drawNetPage(); 
 }
 
 void showPage2() { 
-    Serial.println("Page 2"); 
+    // Serial.println("Page2"); 
     display.clearDisplay();
     page.draw();
     display.display();
+}
+
+
+void getTemp() {
+    float temp = display.readTemperature();
+    // Serial.print("Temp: ");
+    // Serial.println(temp);
+    // char buf[16];
+    // snprintf(buf, sizeof(buf), "Temp: %.1fC", temp);
+    // log_mqtt(buf);
+
+    // Publish to MQTT topic "inkplate/temp"
+    char tempStr[8];
+    snprintf(tempStr, sizeof(tempStr), "%.1f", temp);
+    client.publish("inkplate/temp", tempStr, true); // true = retained, optional
 }
 
 
@@ -281,6 +296,7 @@ void changePage() {
     lastInteractionMs = millis();
     currentPage = (currentPage == PAGE_MAIN) ? PAGE_TWO : PAGE_MAIN;
     Serial.println("Two fingers - switch page");
+    getTemp();
     if (currentPage == PAGE_MAIN) showMainPage();
     else showPage2();
 }
@@ -298,6 +314,7 @@ void setup() {
   }
   showMainPage();   // <--- Use this instead of drawNetPage()
   waitClick();
+  getTemp();
 }
 
 
@@ -352,4 +369,9 @@ void loop() {
       if (currentPage == PAGE_MAIN) showMainPage();
       else showPage2();
   }
+
+  if (millis() - lastTempMs > TEMP_INTERVAL_MS) {
+    lastTempMs = millis();
+    getTemp();
+}
 }

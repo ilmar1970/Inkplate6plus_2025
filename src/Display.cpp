@@ -2,6 +2,10 @@
 
 Inkplate* Display::display = nullptr;
 
+
+constexpr int buttonWidth = 85;
+constexpr int buttonHeight = 42;
+
 using Display::Text;
 
 Text::Text(const char *text, DisplayCoordinates textPosition, int textSize, const GFXfont *font) {
@@ -67,9 +71,9 @@ void Display::Toggle::readCheckState(DisplayCoordinates touchCoordinates, const 
     bool pressed = false;
     int xbr = rectPosition.first + 85;
     int ybr = rectPosition.second + 42;
-    Serial.printf("Touch at (%d,%d); Rect at (%d,%d)-(%d,%d)\n",
-                 touchCoordinates.first, touchCoordinates.second,
-                 rectPosition.first, rectPosition.second, xbr, ybr);
+    // Serial.printf("Touch at (%d,%d); Rect at (%d,%d)-(%d,%d)\n",
+    //              touchCoordinates.first, touchCoordinates.second,
+    //              rectPosition.first, rectPosition.second, xbr, ybr);
     if (touchCoordinates.first >= rectPosition.first && touchCoordinates.first <= xbr &&
         touchCoordinates.second <= ybr && touchCoordinates.second >= rectPosition.second) {
         pressed = true;
@@ -99,3 +103,13 @@ std::pair<DisplayCoordinates*, uint16_t> Display::readTouchData() {
     // No touch: return nullptr and n=0
     return {nullptr, 0};
 }
+
+void Display::Toggle::clearButtonArea() {
+    int x = rectPosition.first;
+    int y = rectPosition.second;
+    int w = buttonWidth;
+    int h = buttonHeight;
+    display->fillRect(x, y, w, h, WHITE);
+    display->partialUpdate();
+}
+

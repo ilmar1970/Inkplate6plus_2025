@@ -57,7 +57,10 @@ namespace Display {
             void enable(bool is_partial=true);
             void disable(bool is_partial=true);
             void resetPress();
+            void clearButtonArea();
+
     };
+
 }
 
 #endif
