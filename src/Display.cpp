@@ -110,6 +110,8 @@ void Display::Toggle::clearButtonArea() {
     int w = buttonWidth;
     int h = buttonHeight;
     display->fillRect(x, y, w, h, WHITE);
+    // Redraw the outline so the button shape remains visible
+    display->drawRoundRect(x, y, w, h, rectRadius, BLACK);
     display->partialUpdate();
 }
 

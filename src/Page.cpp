@@ -1,8 +1,8 @@
 #include "Page.h"
 #include "icons.h" 
 
-const int Page::rect_a_x[Page::tankCount] = {150, 320, 554, 734}; // 50
-const int Page::rect_b_x[Page::tankCount] = {290, 470, 694, 874}; 
+const int Page::rect_a_x[Page::tankCount] = {150, 320, 564, 734}; // 50
+const int Page::rect_b_x[Page::tankCount] = {290, 470, 704, 874}; 
 const int Page::rect_a_y = 220;
 const int Page::rect_b_y = 480;
 // Bilge circle positions and radius
@@ -101,5 +101,5 @@ void Page::drawBilge(int idx) {
         display.fillCircle(x, y, r, BLACK);
     else
         display.drawCircle(x, y, r, BLACK);
-    display.partialUpdate();
+    
 }
