@@ -52,10 +52,10 @@ namespace Display {
                 const GFXfont* font=&FreeSans18pt7b,
                 bool state=false
             );
-            void draw();
+            void draw(bool shouldDraw=true, bool is_partial=true);
             void readCheckState(DisplayCoordinates touchCoordinates, const OnClickListener<Toggle*>& customOnClickListener = nullptr);
-            void enable(bool is_partial=true);
-            void disable(bool is_partial=true);
+            void enable();
+            void disable();
             void resetPress();
             void clearButtonArea();
 

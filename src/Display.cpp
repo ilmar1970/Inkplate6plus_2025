@@ -42,27 +42,29 @@ Toggle::Toggle(
     this->state = state;
 }
 
-void Toggle::draw() {
+void Toggle::draw(bool shouldDraw, bool is_partial) {
+    if (!shouldDraw) return;
     Text::draw();
-    state ? enable(false) : disable(false);
-}
-
-void Toggle::enable(bool is_partial) {
-    display->fillRoundRect(rectPosition.first, rectPosition.second, 85, 42, rectRadius, BLACK);
-    display->fillCircle(circlePosition.first, circlePosition.second, circleRadius, WHITE);
+    if (state) {
+        // Draw enabled state
+        display->fillRoundRect(rectPosition.first, rectPosition.second, 85, 42, rectRadius, BLACK);
+        display->fillCircle(circlePosition.first, circlePosition.second, circleRadius, WHITE);
+    } else {
+        // Draw disabled state
+        display->fillRoundRect(rectPosition.first, rectPosition.second, 85, 42, rectRadius, WHITE);
+        display->drawRoundRect(rectPosition.first, rectPosition.second, 85, 42, rectRadius, BLACK);
+        display->fillCircle(circlePosition.first - 45, circlePosition.second, circleRadius, BLACK);
+    }
     if (is_partial){
         display->partialUpdate();
     }
+}
+
+void Toggle::enable() {
     state = true;
 }
 
-void Toggle::disable(bool is_partial) {
-    display->fillRoundRect(rectPosition.first, rectPosition.second, 85, 42, rectRadius, WHITE);
-    display->drawRoundRect(rectPosition.first, rectPosition.second, 85, 42, rectRadius,BLACK);
-    display->fillCircle(circlePosition.first - 45, circlePosition.second, circleRadius, BLACK);
-    if (is_partial){
-        display->partialUpdate();
-    }
+void Toggle::disable() {
     state = false;
 }
 

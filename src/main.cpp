@@ -6,9 +6,9 @@
 #include "Page.h" 
 #include <Adafruit_HDC302x.h>
 
-#define TOPIC_LOG "inkplate/log"
-#define TOPIC_ERROR "inkplate/last_error"
-#define TOPIC_IP "inkplate/ip"
+#define TOPIC_LOG "inkplate/log/info"
+#define TOPIC_ERROR "inkplate/log/last_error"
+#define TOPIC_IP "inkplate/log/ip"
 #define TOPIC_SUB "inkplate/control/+/state"
 #define TOPIC_BOOSTER "inkplate/control/booster"
 #define TOPIC_CELL "inkplate/control/cell"
@@ -16,13 +16,13 @@
 #define TOPIC_B_LIGHT "inkplate/control/batlight"
 #define TOPIC_B_FAN "inkplate/control/batfan"
 #define TOPIC_DECKWASH "inkplate/control/deckwash"
-#define TOPIC_TANKS "tanks/#"
 #define TOPIC_AC_PORT "inkplate/control/acport"
 #define TOPIC_AC_STRB "inkplate/control/acstrb"
-#define TOPIC_PUMPS "inkplate/pumps/#"
+#define TOPIC_ENV "inkplate/env"
+#define TOPIC_INFO "info/#" // info/victron|history/pumps|tanks/ 
 
 // --- sensor settings ---
-static uint32_t lastEnvMs = 0;
+static uint32_t lastEnvMs = 60000; // force reading on first loop
 constexpr uint32_t ENV_INTERVAL_MS = 60000; // 60 seconds
 
 // --- Backlight control ---
@@ -34,16 +34,14 @@ static uint32_t lastInteractionMs = 0;
 static bool     backlightOn       = true;
 static uint32_t wakeGuardUntilMs  = 0; // swallow touches right after wake
 
-enum Page2 { PAGE_MAIN, PAGE_TWO };
-static Page2 currentPage = PAGE_MAIN;
+enum Page2 { INFO_PAGE, SWITCH_PAGE };
+static Page2 currentPage = INFO_PAGE;
 
 static uint32_t lastRedrawMs = 0;
-constexpr uint32_t FULL_REDRAW_INTERVAL_MS = 300000; // 5 minutes
+constexpr uint32_t FULL_REDRAW_INTERVAL_MS = 600000; // 10 minutes
 
-int fuelPort = 0;
-int fuelStb = 0;
-int waterPort = 0;
-int waterStb = 0;
+int fuelPort = 0, fuelStb = 0, waterPort = 0, waterStb = 0;
+float batValue1 = 0.0, batValue2 = 0.0, batValue3 = 0.0;
 
 Inkplate display(INKPLATE_1BIT);
 Page page(display);
@@ -57,6 +55,23 @@ Display::Toggle b_light("B_Light", TOPIC_B_LIGHT, {600, 200});
 Display::Toggle b_fan("B_Fan", TOPIC_B_FAN, {600, 350});
 Display::Toggle deck_wash("DeckFresh", TOPIC_DECKWASH, {600, 500});
 Display::Toggle ac_strb_toggle("AC_Fl_Stb", TOPIC_AC_STRB, {600, 650});
+
+struct ToggleEntry {
+    const char* topic;
+    Display::Toggle* toggle;
+};
+
+ToggleEntry toggles[] = {
+    { TOPIC_BOOSTER "/state",   &wifi_toggle },
+    { TOPIC_CELL "/state",      &cell_toggle },
+    { TOPIC_STARLINK "/state",  &starlink_toggle },
+    { TOPIC_B_LIGHT "/state",   &b_light },
+    { TOPIC_B_FAN "/state",     &b_fan },
+    { TOPIC_DECKWASH "/state",  &deck_wash },
+    { TOPIC_AC_PORT "/state",   &ac_port_toggle },
+    { TOPIC_AC_STRB "/state",   &ac_strb_toggle }
+};
+constexpr int numToggles = sizeof(toggles) / sizeof(toggles[0]);
 
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -81,86 +96,78 @@ void setup_wifi() {
 }
 
 void callback(char* topic, byte* payload, unsigned int length) {
-    // --- Convert payload to lowercase, trimmed C-string ---
-    char msg[32]; // Adjust size as needed for your payloads
-    unsigned int copyLen = (length < sizeof(msg) - 1) ? length : sizeof(msg) - 1;
-    memcpy(msg, payload, copyLen);
-    msg[copyLen] = '\0';
+    // Parse payload as boolean
+    bool on = (length == 1 && payload[0] == '1');
 
-    // Trim leading/trailing whitespace
-    char* start = msg;
-    while (*start && isspace((unsigned char)*start)) ++start;
-    char* end = msg + strlen(msg) - 1;
-    while (end > start && isspace((unsigned char)*end)) *end-- = '\0';
-
-    // Lowercase payload
-    for (char* p = start; *p; ++p) *p = tolower((unsigned char)*p);
-
-    // --- Convert topic to lowercase C-string for case-insensitive matching ---
-    char t[64]; // Adjust size as needed for your topics
-    strncpy(t, topic, sizeof(t) - 1);
-    t[sizeof(t) - 1] = '\0';
-    for (char* p = t; *p; ++p) *p = tolower((unsigned char)*p);
-
-    // Parse payload as boolean, start is pointer on msg
-    bool on = (strcmp(start, "1") == 0 || strcmp(start, "true") == 0 || strcmp(start, "on") == 0);
-
-    // --- Topic routing ---
-    if (strcmp(t, "inkplate/control/booster/state") == 0) {
-        on ? wifi_toggle.enable() : wifi_toggle.disable();
-    } else if (strcmp(t, "inkplate/control/cell/state") == 0) {
-        on ? cell_toggle.enable() : cell_toggle.disable();
-    } else if (strcmp(t, "inkplate/control/starlink/state") == 0) {
-        on ? starlink_toggle.enable() : starlink_toggle.disable();
-    } else if (strcmp(t, "inkplate/control/batlight/state") == 0) {
-        on ? b_light.enable() : b_light.disable();
-    } else if (strcmp(t, "inkplate/control/batfan/state") == 0) {
-        on ? b_fan.enable() : b_fan.disable();
-    } else if (strcmp(t, "inkplate/control/deckwash/state") == 0) {
-        on ? deck_wash.enable() : deck_wash.disable();
-    } else if (strcmp(t, "inkplate/control/acport/state") == 0) {
-        on ? ac_port_toggle.enable() : ac_port_toggle.disable();
-    } else if (strcmp(t, "inkplate/control/acstrb/state") == 0) {
-        on ? ac_strb_toggle.enable() : ac_strb_toggle.disable();
-    } else if (strcmp(t, "tanks/fuelport") == 0) {
-        fuelPort = atoi(start);
-        page.setTank(0, fuelPort);
-        if (currentPage == PAGE_TWO) page.drawTank(0);
-    } else if (strcmp(t, "tanks/fuelstb") == 0) {
-        fuelStb = atoi(start);
-        page.setTank(1, fuelStb);
-        if (currentPage == PAGE_TWO) page.drawTank(1);
-    } else if (strcmp(t, "tanks/waterport") == 0) {
-        waterPort = atoi(start);
-        page.setTank(2, waterPort);
-        if (currentPage == PAGE_TWO) page.drawTank(2);
-    } else if (strcmp(t, "tanks/waterstb") == 0) {
-        waterStb = atoi(start);
-        page.setTank(3, waterStb);
-        if (currentPage == PAGE_TWO) page.drawTank(3);
-    } else if (strcmp(t, "inkplate/pumps/portfwd") == 0) {
-        page.setBilge(0, on);
-        if (currentPage == PAGE_TWO) page.drawBilge(0);
-    } else if (strcmp(t, "inkplate/pumps/portmid") == 0) {
-        page.setBilge(1, on);
-        if (currentPage == PAGE_TWO) page.drawBilge(1);
-    } else if (strcmp(t, "inkplate/pumps/porteng") == 0) {
-        page.setBilge(2, on);
-        if (currentPage == PAGE_TWO) page.drawBilge(2);
-    } else if (strcmp(t, "inkplate/pumps/stbfwd") == 0) {
-        page.setBilge(3, on);
-        if (currentPage == PAGE_TWO) page.drawBilge(3);
-    } else if (strcmp(t, "inkplate/pumps/stbmid") == 0) {
-        page.setBilge(4, on);
-        if (currentPage == PAGE_TWO) page.drawBilge(4);
-    } else if (strcmp(t, "inkplate/pumps/stbeng") == 0) {
-        page.setBilge(5, on);
-        if (currentPage == PAGE_TWO) page.drawBilge(5);
+    // --- Handle toggles ---
+    for (int i = 0; i < numToggles; ++i) {
+        if (strcmp(topic, toggles[i].topic) == 0) {
+            toggles[i].toggle->state = on;
+            toggles[i].toggle->draw(currentPage == SWITCH_PAGE);
+            goto log_and_return;
+        }
     }
 
-    // Optional: small log
+    // --- Handle tanks ---
+    if (strncmp(topic, "info/victron/tanks/", 19) == 0) {
+        int idx = -1;
+        if (strcmp(topic, "info/victron/tanks/fuelPort") == 0) idx = 0;
+        else if (strcmp(topic, "info/victron/tanks/fuelStb") == 0) idx = 1;
+        else if (strcmp(topic, "info/victron/tanks/waterPort") == 0) idx = 2;
+        else if (strcmp(topic, "info/victron/tanks/waterStb") == 0) idx = 3;
+        if (idx >= 0) {
+            int val = atoi((const char*)payload);
+            switch (idx) {
+                case 0: fuelPort = val; break;
+                case 1: fuelStb = val; break;
+                case 2: waterPort = val; break;
+                case 3: waterStb = val; break;
+            }
+            page.setTank(idx, val);
+            if (currentPage == INFO_PAGE) page.drawTank(idx);
+            goto log_and_return;
+        }
+    }
+
+    // --- Handle bilges ---
+    if (strncmp(topic, "info/victron/bat/voltage", 24) == 0) {
+        int idy = -1;
+        if (strcmp(topic, "info/victron/bat/voltage/48v") == 0) idy = 0;
+        else if (strcmp(topic, "info/victron/bat/voltage/24v") == 0) idy = 1;
+        else if (strcmp(topic, "info/victron/bat/voltage/12v") == 0) idy = 2;
+        if (idy >= 0) {
+            float val = atof((const char*)payload);
+            switch (idy) {
+                case 0: batValue1 = val; break;
+                case 1: batValue2 = val; break;
+                case 2: batValue3 = val; break;
+            }
+            page.setBat(batValue1, batValue2, batValue3);
+            if (currentPage == INFO_PAGE) page.updateBat();
+            goto log_and_return;
+        }
+    }
+
+    // --- Handle bat ---
+    if (strncmp(topic, "info/history/pumps", 19) == 0) {
+        int idx = -1; // info/history/pumps/StbEng
+        if (strcmp(topic, "info/history/pumps/PortFwd") == 0) idx = 0;
+        else if (strcmp(topic, "info/history/pumps/PortMid") == 0) idx = 1;
+        else if (strcmp(topic, "info/history/pumps/PortEng") == 0) idx = 2;
+        else if (strcmp(topic, "info/history/pumps/StbFwd") == 0) idx = 3;
+        else if (strcmp(topic, "info/history/pumps/StbMid") == 0) idx = 4;
+        else if (strcmp(topic, "info/history/pumps/StbEng") == 0) idx = 5;
+        if (idx >= 0) {
+            page.setBilge(idx, on);
+            if (currentPage == INFO_PAGE) page.drawBilge(idx);
+            goto log_and_return;
+        }
+    }
+
+    // --- Log ---
+    log_and_return:
     char logEntry[128];
-    snprintf(logEntry, sizeof(logEntry), "STATE [%s] <= %s", topic, start);
+    snprintf(logEntry, sizeof(logEntry), "STATE [%s] <= %.*s", topic, length, payload);
     log_mqtt(logEntry);
 }
 
@@ -170,8 +177,7 @@ void reconnect() {
         if (client.connect(client_id, mqtt_user, mqtt_pass)) {
             Serial.println("connected");
             client.subscribe(TOPIC_SUB);
-            client.subscribe(TOPIC_TANKS);
-            client.subscribe(TOPIC_PUMPS);
+            client.subscribe(TOPIC_INFO);
             IPAddress ip = WiFi.localIP();
             String ipStr = ip.toString();
             client.publish(TOPIC_IP, ipStr.c_str());
@@ -216,18 +222,6 @@ inline bool wakeOnAnyTap() {
     return false;
 }
 
-void drawNetPage() {
-    title.draw();
-    wifi_toggle.draw();
-    cell_toggle.draw();
-    starlink_toggle.draw();
-    b_light.draw();
-    b_fan.draw();
-    deck_wash.draw();
-    ac_port_toggle.draw();
-    ac_strb_toggle.draw();
-    display.display();
-}
 
 void setupToggleListener(Display::Toggle& toggle, const char* topic) {
     // topic is the command topic, e.g. "inkplate/control/aux1"
@@ -255,31 +249,36 @@ void waitClick() {
     setupToggleListener(ac_strb_toggle, ac_strb_toggle.name);
 }
 
-void showMainPage() { 
+void SwitchPage() { 
     display.clearDisplay(); 
-    drawNetPage(); 
+    title.draw();
+    wifi_toggle.draw(true,false);
+    cell_toggle.draw(true,false);
+    starlink_toggle.draw(true,false);
+    b_light.draw(true,false);
+    b_fan.draw(true,false);
+    deck_wash.draw(true,false);
+    ac_port_toggle.draw(true,false);
+    ac_strb_toggle.draw(true,false);
+    waitClick();
+    display.display();
 }
 
-void showPage2() { 
+void InfoPage() { 
     display.clearDisplay();
     page.draw();
     display.display();
 }
 
-// void getTemp() {
-//     float temp = display.readTemperature();
-//     char tempStr[8];
-//     snprintf(tempStr, sizeof(tempStr), "%.1f", temp);
-//     client.publish("inkplate/temp", tempStr, true); // true = retained, optional
-// }
 
 void changePage() {
     lastInteractionMs = millis();
-    currentPage = (currentPage == PAGE_MAIN) ? PAGE_TWO : PAGE_MAIN;
+    currentPage = (currentPage == INFO_PAGE) ? SWITCH_PAGE : INFO_PAGE;
     //Serial.println("Two fingers - switch page");
-    if (currentPage == PAGE_MAIN) showMainPage();
-    else showPage2();
+    if (currentPage == INFO_PAGE) InfoPage();
+    else SwitchPage();
 }
+
 
 void setup() {
     Serial.begin(115200);
@@ -296,9 +295,9 @@ void setup() {
         while (1);
     }
     delay(1000);
-    showMainPage();
-    waitClick();
+    InfoPage();
 }
+
 
 void loop() {
     if (WiFi.status() != WL_CONNECTED) {
@@ -322,33 +321,36 @@ void loop() {
     }
     
     auto touchRecord = Display::readTouchData();
-    if (touchRecord.second > 1) {
-        changePage();
-    } else if (touchRecord.second == 1 && touchRecord.first != nullptr && currentPage == PAGE_MAIN) {
-        wifi_toggle.readCheckState(*touchRecord.first);
-        cell_toggle.readCheckState(*touchRecord.first);
-        starlink_toggle.readCheckState(*touchRecord.first);
-        b_light.readCheckState(*touchRecord.first);
-        b_fan.readCheckState(*touchRecord.first);
-        deck_wash.readCheckState(*touchRecord.first);
-        ac_port_toggle.readCheckState(*touchRecord.first);
-        ac_strb_toggle.readCheckState(*touchRecord.first);
-    } else {
-        wifi_toggle.resetPress();
-        cell_toggle.resetPress();
-        starlink_toggle.resetPress();
-        b_light.resetPress();
-        b_fan.resetPress();
-        deck_wash.resetPress();
-        ac_port_toggle.resetPress();
-        ac_strb_toggle.resetPress();
+
+    if (touchRecord.second > 1) {changePage();}
+
+    if (currentPage == SWITCH_PAGE) {
+        if (touchRecord.second == 1 && touchRecord.first != nullptr) {
+            wifi_toggle.readCheckState(*touchRecord.first);
+            cell_toggle.readCheckState(*touchRecord.first);
+            starlink_toggle.readCheckState(*touchRecord.first);
+            b_light.readCheckState(*touchRecord.first);
+            b_fan.readCheckState(*touchRecord.first);
+            deck_wash.readCheckState(*touchRecord.first);
+            ac_port_toggle.readCheckState(*touchRecord.first);
+            ac_strb_toggle.readCheckState(*touchRecord.first);
+        } else {
+            wifi_toggle.resetPress();
+            cell_toggle.resetPress();
+            starlink_toggle.resetPress();
+            b_light.resetPress();
+            b_fan.resetPress();
+            deck_wash.resetPress();
+            ac_port_toggle.resetPress();
+            ac_strb_toggle.resetPress();
+        }
     }
 
     // Full redraw every 5 minutes
     if (!backlightOn && (millis() - lastRedrawMs > FULL_REDRAW_INTERVAL_MS)) {
         lastRedrawMs = millis();
-        if (currentPage == PAGE_MAIN) showMainPage();
-        else showPage2();
+        if (currentPage == SWITCH_PAGE) SwitchPage();
+        else InfoPage();
     }
    
     if (millis() - lastEnvMs > ENV_INTERVAL_MS) {
@@ -359,7 +361,16 @@ void loop() {
         char tempStr[16], humStr[16];
         snprintf(tempStr, sizeof(tempStr), "%.2f", temp);
         snprintf(humStr, sizeof(humStr), "%.2f", RH);
-        client.publish("inkplate/env/temp", tempStr, true); // retained
-        client.publish("inkplate/env/hum", humStr, true);   // retained
+        client.publish(TOPIC_ENV "/temp", tempStr, true); // retained
+        client.publish(TOPIC_ENV "/hum", humStr, true);   // retained
+        page.setTemp(temp);
+        page.setHum(RH);
+        page.setAirPressure(1023.5); // dummy value
+        if (currentPage == INFO_PAGE) {
+            page.updateTemp();
+            page.updateHum();
+            page.updateAirPressure();
+        }
     }
 }
+
