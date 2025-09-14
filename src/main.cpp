@@ -149,17 +149,20 @@ void callback(char* topic, byte* payload, unsigned int length) {
     }
 
     // --- Handle bat ---
-    if (strncmp(topic, "info/nodered/history/pumps", 27) == 0) {
-        int idx = -1; 
-        if (strcmp(topic, "info/nodered/history/pumps/PortFwd") == 0) idx = 0;
-        else if (strcmp(topic, "info/nodered/history/pumps/PortMid") == 0) idx = 1;
-        else if (strcmp(topic, "info/nodered/history/pumps/PortEng") == 0) idx = 2;
-        else if (strcmp(topic, "info/nodered/history/pumps/StbFwd") == 0) idx = 3;
-        else if (strcmp(topic, "info/nodered/history/pumps/StbMid") == 0) idx = 4;
-        else if (strcmp(topic, "info/nodered/history/pumps/StbEng") == 0) idx = 5;
+    if (strncmp(topic, "info/nodered/bilge", 18) == 0) {
+        int idx = -1;
+        Serial.printf("Bilge topic: %s\n", topic);
+        if (strcmp(topic, "info/nodered/bilge/PortFwd/m_per_xh") == 0) idx = 0;
+        else if (strcmp(topic, "info/nodered/bilge/PortMid/m_per_xh") == 0) idx = 1;
+        else if (strcmp(topic, "info/nodered/bilge/PortEng/m_per_xh") == 0) idx = 2;
+        else if (strcmp(topic, "info/nodered/bilge/StbFwd/m_per_xh") == 0) idx = 3;
+        else if (strcmp(topic, "info/nodered/bilge/StbMid/m_per_xh") == 0) idx = 4;
+        else if (strcmp(topic, "info/nodered/bilge/StbEng/m_per_xh") == 0) idx = 5;
         if (idx >= 0) {
-            page.setBilge(idx, on);
+            int value = atoi((const char*)payload); // or use strtol for safety
+            page.setBilge(idx, value);
             if (currentPage == INFO_PAGE) page.drawBilge(idx);
+            Serial.printf("Bilge %d = %d\n", idx, value);
             goto log_and_return;
         }
     }

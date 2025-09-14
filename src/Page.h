@@ -17,7 +17,7 @@ public:
 
     // Tank and bilge state
     void setTank(int idx, int pct);
-    void setBilge(int idx, bool state);
+    void setBilge(int idx, int level);
 
     // Battery, temp, hum, air pressure values
     void setTemp(float t) { tempValue = t; }
@@ -40,7 +40,7 @@ public:
 
     // Data members
     int percent[tankCount];
-    bool bilgeState[bilgeCount];
+    int bilgeLevel[bilgeCount];
 
     float tempValue = 0.0;
     float humValue = 0.0;

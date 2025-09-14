@@ -35,16 +35,17 @@ const int Page::bilge_y[Page::bilgeCount] = {245, 345, 445, 245, 345, 445};
 
 Page::Page(Inkplate& disp) : display(disp) {
     for (int i = 0; i < tankCount; ++i) percent[i] = 0;
-    for (int i = 0; i < bilgeCount; ++i) bilgeState[i] = false;
+    for (int i = 0; i < bilgeCount; ++i) bilgeLevel[i] = 0;
+    
 }
 
 void Page::setTank(int idx, int pct) {
     if (idx < 0 || idx >= tankCount) return;
     percent[idx] = pct;
 }
-void Page::setBilge(int idx, bool state) {
+void Page::setBilge(int idx, int level) {
     if (idx < 0 || idx >= bilgeCount) return;
-    bilgeState[idx] = state;
+    bilgeLevel[idx] = level;
 }
 
 void Page::draw() {
@@ -110,10 +111,7 @@ void Page::draw() {
     }
     // Draw bilge circles
     for (int i = 0; i < bilgeCount; ++i) {
-        if (bilgeState[i])
-            display.fillCircle(bilge_x[i], bilge_y[i], bilge_radius, BLACK);
-        else
-            display.drawCircle(bilge_x[i], bilge_y[i], bilge_radius, BLACK);
+        display.drawCircle(bilge_x[i], bilge_y[i], bilge_radius, BLACK);
     }
 }
 
@@ -147,14 +145,16 @@ void Page::drawTank(int idx) {
 
 
 void Page::drawBilge(int idx) {
-    // Redraw only the bilge circle at index idx
-    int x = bilge_x[idx], y = bilge_y[idx], r = bilge_radius;
-    // Clear area
-    display.fillRect(x - r - 2, y - r - 2, 2*r + 4, 2*r + 4, WHITE);
-    if (bilgeState[idx])
-        display.fillCircle(x, y, r, BLACK);
-    else
-        display.drawCircle(x, y, r, BLACK);
+    if (idx < 0 || idx >= bilgeCount) return;
+    // Always draw the outer circle
+    display.fillCircle(bilge_x[idx], bilge_y[idx], bilge_radius, WHITE);
+    display.drawCircle(bilge_x[idx], bilge_y[idx], bilge_radius, BLACK);
+
+    // Draw inner black circle according to level (0-7)
+    int r = bilgeLevel[idx] * 4;
+    if (bilgeLevel[idx] > 0) {
+        display.fillCircle(bilge_x[idx], bilge_y[idx], r, BLACK);
+    }
     display.partialUpdate();
 }
 
