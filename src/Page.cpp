@@ -13,6 +13,7 @@ constexpr int icon_w = 60, icon_h = 60;
 // --- Text positions (relative to icons) ---
 constexpr int temp_text_x = temp_icon_x + icon_w + 10;
 constexpr int temp_text_y = temp_icon_y + icon_h - 10;
+constexpr int sea_text_y = temp_text_y + 35; // 35 pixels below air temp
 
 constexpr int bat_text_x = bat_icon_x + icon_w + 20;
 constexpr int bat_text_y = bat_icon_y + 15;
@@ -33,10 +34,8 @@ const int Page::bilge_x[Page::bilgeCount] = {70, 70, 70, 950, 950, 950};
 const int Page::bilge_y[Page::bilgeCount] = {245, 345, 445, 245, 345, 445};
 
 Page::Page(Inkplate& disp) : display(disp) {
-    for (int i = 0; i < tankCount; ++i) {
-        percent[i] = 0;
-        bilgeState[i] = false;
-    }
+    for (int i = 0; i < tankCount; ++i) percent[i] = 0;
+    for (int i = 0; i < bilgeCount; ++i) bilgeState[i] = false;
 }
 
 void Page::setTank(int idx, int pct) {
@@ -61,7 +60,9 @@ void Page::draw() {
 
     // --- Temperature (right of temp icon) ---
     display.setCursor(temp_text_x, temp_text_y);
-    display.print(String(tempValue, 1) + " °C");
+    display.print(String(tempValue, 1) + " C");
+    display.setCursor(temp_text_x, sea_text_y);
+    display.print(String(seaTempValue, 1) + " sea");
 
     // --- Battery (right of bat icon, three values in a column) ---
     display.setCursor(bat_text_x, bat_text_y);
@@ -194,5 +195,14 @@ void Page::updateAirPressure() {
     display.setTextColor(BLACK, WHITE);
     display.setCursor(air_text_x, air_text_y);
     display.print(String(airPressureValue, 0) + " hPa");
+    display.partialUpdate();
+}
+
+void Page::updateSeaTemp() {
+    display.fillRect(temp_text_x, sea_text_y - 30, 100, 40, WHITE);
+    display.setFont(&FreeSans18pt7b);
+    display.setTextColor(BLACK, WHITE);
+    display.setCursor(temp_text_x, sea_text_y);
+    display.print(String(seaTempValue, 1) + " sea");
     display.partialUpdate();
 }

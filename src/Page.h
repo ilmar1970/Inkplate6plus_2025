@@ -24,6 +24,7 @@ public:
     void setHum(float h) { humValue = h; }
     void setAirPressure(float p) { airPressureValue = p; }
     void setBat(float b1, float b2, float b3) { batValue1 = b1; batValue2 = b2; batValue3 = b3; }
+    void setSeaTemp(float t) { seaTempValue = t; }
 
     // Drawing
     void draw();
@@ -35,6 +36,7 @@ public:
     void updateHum();
     void updateBat();
     void updateAirPressure();
+    void updateSeaTemp();
 
     // Data members
     int percent[tankCount];
@@ -44,6 +46,7 @@ public:
     float humValue = 0.0;
     float airPressureValue = 0.0;
     float batValue1 = 0.0, batValue2 = 0.0, batValue3 = 0.0;
+    float seaTempValue = 0.0;
 
 private:
     Inkplate& display;
