@@ -25,8 +25,8 @@ constexpr int hum_text_y = hum_icon_y + icon_h - 10;
 constexpr int air_text_x = air_icon_x + icon_w + 10;
 constexpr int air_text_y = air_icon_y + icon_h - 10;
 
-const int Page::rect_a_x[Page::tankCount] = {160, 330, 574, 744}; // 50
-const int Page::rect_b_x[Page::tankCount] = {280, 460, 694, 864}; 
+const int Page::rect_a_x[Page::tankCount] = {140, 300, 460, 604, 764}; 
+const int Page::rect_b_x[Page::tankCount] = {260, 420, 564, 724, 884}; 
 const int Page::rect_a_y = 220;
 const int Page::rect_b_y = 480;
 // Bilge circle positions and radius
@@ -81,12 +81,12 @@ void Page::draw() {
     display.setCursor(air_text_x, air_text_y);
     display.print(String(airPressureValue, 0) + " hPa");
 
-    // --- Restore old icons ---
-    // Example positions, adjust as needed:
-    display.drawBitmap(280, 65, water, 60, 60, BLACK);   // Water icon
-    display.drawBitmap(694, 65, diesel, 60, 60, BLACK);  // Diesel icon
-    display.drawBitmap(30, 70, bilge, 80, 60, BLACK);    // Left bilge icon
-    display.drawBitmap(910, 70, bilge, 80, 60, BLACK);   // Right bilge icon
+    // --- Upper icons row
+    display.drawBitmap(30, 70, bilge, 80, 60, BLACK);
+    display.drawBitmap(250, 65, diesel, 60, 60, BLACK);
+    display.drawBitmap(480, 65, bat, 60, 60, BLACK);
+    display.drawBitmap(720, 65, water, 60, 60, BLACK);
+    display.drawBitmap(910, 70, bilge, 80, 60, BLACK);
 
     // Draw tanks
     for (int i = 0; i < tankCount; ++i) {
@@ -101,12 +101,12 @@ void Page::draw() {
         // Draw filled black rectangle (percent fill, from bottom up)
         display.fillRect(rect_a_x[i], fill_y, w, fill_h, BLACK);
 
-        // Draw label: just percent + " %"
+        // Draw label: 
         String label = String(percent[i]) + " %";
         display.setFont(&FreeSansBold24pt7b);
         display.setTextColor(BLACK, WHITE);
         display.setTextSize(1);
-        display.setCursor(rect_a_x[i] + 20, rect_a_y - 10);
+        display.setCursor(rect_a_x[i] + 10, rect_a_y - 10);
         display.print(label);
     }
     // Draw bilge circles
@@ -190,7 +190,7 @@ void Page::updateBat() {
 }
 
 void Page::updateAirPressure() {
-    display.fillRect(air_text_x, air_text_y - 30, 100, 40, WHITE);
+    display.fillRect(air_text_x, air_text_y - 30, 200, 40, WHITE);
     display.setFont(&FreeSans18pt7b);
     display.setTextColor(BLACK, WHITE);
     display.setCursor(air_text_x, air_text_y);
@@ -199,7 +199,7 @@ void Page::updateAirPressure() {
 }
 
 void Page::updateSeaTemp() {
-    display.fillRect(temp_text_x, sea_text_y - 30, 100, 40, WHITE);
+    display.fillRect(temp_text_x, sea_text_y - 30, 120, 40, WHITE);
     display.setFont(&FreeSans18pt7b);
     display.setTextColor(BLACK, WHITE);
     display.setCursor(temp_text_x, sea_text_y);

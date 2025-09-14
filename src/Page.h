@@ -3,7 +3,7 @@
 
 class Page {
 public:
-    static constexpr int tankCount = 4;
+    static constexpr int tankCount = 5;
     static constexpr int bilgeCount = 6;
     static const int rect_a_x[tankCount];
     static const int rect_b_x[tankCount];

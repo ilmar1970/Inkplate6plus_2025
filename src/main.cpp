@@ -40,7 +40,7 @@ static Page2 currentPage = INFO_PAGE;
 static uint32_t lastRedrawMs = 0;
 constexpr uint32_t FULL_REDRAW_INTERVAL_MS = 600000; // 10 minutes
 
-int fuelPort = 0, fuelStb = 0, waterPort = 0, waterStb = 0;
+int fuelPort = 0, fuelStb = 0, waterPort = 0, waterStb = 0, soc = 0;
 float batValue1 = 0.0, batValue2 = 0.0, batValue3 = 0.0;
 
 Inkplate display(INKPLATE_1BIT);
@@ -96,7 +96,11 @@ void setup_wifi() {
 }
 
 void callback(char* topic, byte* payload, unsigned int length) {
-    // Parse payload as boolean
+    // Parse payload
+    char buf[64];
+    size_t len = (length < sizeof(buf) - 1) ? length : sizeof(buf) - 1;
+    memcpy(buf, payload, len);
+    buf[len] = '\0';
     bool on = (length == 1 && payload[0] == '1');
 
     // --- Handle toggles ---
@@ -109,41 +113,61 @@ void callback(char* topic, byte* payload, unsigned int length) {
     }
 
     // --- Handle tanks ---
-    if (strncmp(topic, "info/victron/tanks/", 19) == 0) {
+    if (strncmp(topic, "info/victron/tanks", 18) == 0) {
         int idx = -1;
         if (strcmp(topic, "info/victron/tanks/fuelPort") == 0) idx = 0;
         else if (strcmp(topic, "info/victron/tanks/fuelStb") == 0) idx = 1;
-        else if (strcmp(topic, "info/victron/tanks/waterPort") == 0) idx = 2;
-        else if (strcmp(topic, "info/victron/tanks/waterStb") == 0) idx = 3;
+        else if (strcmp(topic, "info/victron/tanks/soc") == 0) idx = 2;
+        else if (strcmp(topic, "info/victron/tanks/waterPort") == 0) idx = 3;
+        else if (strcmp(topic, "info/victron/tanks/waterStb") == 0) idx = 4;
         if (idx >= 0) {
-            int val = atoi((const char*)payload);
+            int val = round(atof(buf)); // FIXED: use buf
+            bool skip = false;
             switch (idx) {
-                case 0: fuelPort = val; break;
-                case 1: fuelStb = val; break;
-                case 2: waterPort = val; break;
-                case 3: waterStb = val; break;
+                case 0: skip = (val == fuelPort);  break;
+                case 1: skip = (val == fuelStb);   break;
+                case 2: skip = (val == soc);       break;
+                case 3: skip = (val == waterPort); break;
+                case 4: skip = (val == waterStb);  break;
             }
-            page.setTank(idx, val);
-            if (currentPage == INFO_PAGE) page.drawTank(idx);
+            if (!skip) {
+                switch (idx) {
+                    case 0: fuelPort = val;  break;
+                    case 1: fuelStb = val;   break;
+                    case 2: soc = val;       break;
+                    case 3: waterPort = val; break;
+                    case 4: waterStb = val;  break;
+                }
+                page.setTank(idx, val);
+                if (currentPage == INFO_PAGE) page.drawTank(idx);
+            }
             goto log_and_return;
         }
     }
 
-    // --- Handle bilges ---
+    // --- Handle battery voltage ---
     if (strncmp(topic, "info/victron/bat/voltage", 24) == 0) {
         int idy = -1;
         if (strcmp(topic, "info/victron/bat/voltage/48v") == 0) idy = 0;
         else if (strcmp(topic, "info/victron/bat/voltage/24v") == 0) idy = 1;
         else if (strcmp(topic, "info/victron/bat/voltage/12v") == 0) idy = 2;
         if (idy >= 0) {
-            float val = atof((const char*)payload);
+            float val = atof(buf); // FIXED: use buf
+            bool skip = false;
             switch (idy) {
-                case 0: batValue1 = val; break;
-                case 1: batValue2 = val; break;
-                case 2: batValue3 = val; break;
+                case 0: skip = (val == batValue1); break;
+                case 1: skip = (val == batValue2); break;
+                case 2: skip = (val == batValue3); break;
             }
-            page.setBat(batValue1, batValue2, batValue3);
-            if (currentPage == INFO_PAGE) page.updateBat();
+            if (!skip) {
+                switch (idy) {
+                    case 0: batValue1 = val; break;
+                    case 1: batValue2 = val; break;
+                    case 2: batValue3 = val; break;
+                }
+                page.setBat(batValue1, batValue2, batValue3);
+                if (currentPage == INFO_PAGE) page.updateBat();
+            }
             goto log_and_return;
         }
     }
@@ -151,7 +175,6 @@ void callback(char* topic, byte* payload, unsigned int length) {
     // --- Handle bat ---
     if (strncmp(topic, "info/nodered/bilge", 18) == 0) {
         int idx = -1;
-        Serial.printf("Bilge topic: %s\n", topic);
         if (strcmp(topic, "info/nodered/bilge/PortFwd/m_per_xh") == 0) idx = 0;
         else if (strcmp(topic, "info/nodered/bilge/PortMid/m_per_xh") == 0) idx = 1;
         else if (strcmp(topic, "info/nodered/bilge/PortEng/m_per_xh") == 0) idx = 2;
@@ -159,10 +182,9 @@ void callback(char* topic, byte* payload, unsigned int length) {
         else if (strcmp(topic, "info/nodered/bilge/StbMid/m_per_xh") == 0) idx = 4;
         else if (strcmp(topic, "info/nodered/bilge/StbEng/m_per_xh") == 0) idx = 5;
         if (idx >= 0) {
-            int value = atoi((const char*)payload); // or use strtol for safety
+            int value = atoi(buf); // FIXED: use buf
             page.setBilge(idx, value);
             if (currentPage == INFO_PAGE) page.drawBilge(idx);
-            Serial.printf("Bilge %d = %d\n", idx, value);
             goto log_and_return;
         }
     }
@@ -170,7 +192,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
 
     // --- Handle sea temp ---
     if (strcmp(topic, "info/nodered/seaTemp") == 0) {
-        float val = atof((const char*)payload);
+        float val = atof(buf); // FIXED: use buf
         page.setSeaTemp(val);
         if (currentPage == INFO_PAGE) page.updateSeaTemp();
         goto log_and_return;
