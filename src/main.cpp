@@ -23,7 +23,7 @@
 
 // --- sensor settings ---
 static uint32_t lastEnvMs = 60000; // force reading on first loop
-constexpr uint32_t ENV_INTERVAL_MS = 60000; // 60 seconds
+constexpr uint32_t ENV_INTERVAL_MS = 30000; // 60 seconds
 
 // --- Backlight control ---
 constexpr uint32_t BACKLIGHT_TIMEOUT_MS = 60000; // 60s (adjust as you like)
@@ -42,6 +42,9 @@ constexpr uint32_t FULL_REDRAW_INTERVAL_MS = 600000; // 10 minutes
 
 int fuelPort = 0, fuelStb = 0, waterPort = 0, waterStb = 0, soc = 0;
 float batValue1 = 0.0, batValue2 = 0.0, batValue3 = 0.0;
+float lastSeaTemp = -1000.0, lastAirTemp = -1000.0, lastHum = -1000.0, lastAirPressure = -1000.0;
+double airTemp = 0.0, RH = 0.0, AirPressure = 1023.546; // dummy value
+char airTempStr[16], humStr[16], pressureStr[16];
 
 Inkplate display(INKPLATE_1BIT);
 Page page(display);
@@ -189,12 +192,14 @@ void callback(char* topic, byte* payload, unsigned int length) {
         }
     }
 
-
     // --- Handle sea temp ---
     if (strcmp(topic, "info/nodered/seaTemp") == 0) {
-        float val = atof(buf); // FIXED: use buf
-        page.setSeaTemp(val);
-        if (currentPage == INFO_PAGE) page.updateSeaTemp();
+        float val = atof(buf);
+        if (val != lastSeaTemp) {
+            lastSeaTemp = val;
+            page.setSeaTemp(val);
+            if (currentPage == INFO_PAGE) page.updateSeaTemp();
+        }
         goto log_and_return;
     }   
 
@@ -314,6 +319,41 @@ void changePage() {
 }
 
 
+inline double round_1dp(double x) { return std::round(x * 10.0) / 10.0; }
+
+inline bool same_1dp(double a, double b) {
+  return round_1dp(a) == round_1dp(b);
+}
+
+void getEnv() {
+    hdc.readTemperatureHumidityOnDemand(airTemp, RH, TRIGGERMODE_LP0);
+    airTemp = round_1dp(airTemp);
+    RH = round_1dp(RH);
+    AirPressure = round_1dp(AirPressure);
+     // Update only if changed
+    if (!same_1dp(airTemp, lastAirTemp)) {
+        lastAirTemp = airTemp;
+        page.setTemp(airTemp);
+        snprintf(airTempStr, sizeof(airTempStr), "%.1f", airTemp);
+        client.publish(TOPIC_ENV "/temp", airTempStr, true); // retained
+        if (currentPage == INFO_PAGE) page.updateTemp();
+    }
+    if (!same_1dp(RH, lastHum)) {
+        lastHum = RH;
+        page.setHum(RH);
+        snprintf(humStr, sizeof(humStr), "%.1f", RH);
+        client.publish(TOPIC_ENV "/hum", humStr, true); // retained
+        if (currentPage == INFO_PAGE) page.updateHum();
+    }
+    if (!same_1dp(AirPressure, lastAirPressure)) {
+        lastAirPressure = AirPressure;
+        page.setAirPressure(AirPressure);
+        snprintf(pressureStr, sizeof(pressureStr), "%.1f", AirPressure);
+        client.publish(TOPIC_ENV "/pressure", pressureStr, true); // retained
+        if (currentPage == INFO_PAGE) page.updateAirPressure();
+    }
+}   
+
 void setup() {
     Serial.begin(115200);
     initDisplay();
@@ -389,22 +429,7 @@ void loop() {
    
     if (millis() - lastEnvMs > ENV_INTERVAL_MS) {
         lastEnvMs = millis();
-        double temp = 0.0;
-        double RH = 0.0;
-        hdc.readTemperatureHumidityOnDemand(temp, RH, TRIGGERMODE_LP0);
-        char tempStr[16], humStr[16];
-        snprintf(tempStr, sizeof(tempStr), "%.2f", temp);
-        snprintf(humStr, sizeof(humStr), "%.2f", RH);
-        client.publish(TOPIC_ENV "/temp", tempStr, true); // retained
-        client.publish(TOPIC_ENV "/hum", humStr, true);   // retained
-        page.setTemp(temp);
-        page.setHum(RH);
-        page.setAirPressure(1023.5); // dummy value
-        if (currentPage == INFO_PAGE) {
-            page.updateTemp();
-            page.updateHum();
-            page.updateAirPressure();
-        }
+        getEnv();
     }
 }
 

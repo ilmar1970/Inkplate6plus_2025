@@ -4,10 +4,10 @@
 #include <Fonts/FreeSansBold24pt7b.h>
 
 // --- Icon and text positions for bottom row ---
-constexpr int temp_icon_x = 270, temp_icon_y = 600;
-constexpr int bat_icon_x  = 40,  bat_icon_y  = 600;
-constexpr int hum_icon_x  = 500, hum_icon_y  = 600;
-constexpr int air_icon_x  = 750, air_icon_y  = 600;
+constexpr int temp_icon_x = 270, temp_icon_y = 550;
+constexpr int bat_icon_x  = 40,  bat_icon_y  = 550;
+constexpr int hum_icon_x  = 500, hum_icon_y  = 550;
+constexpr int air_icon_x  = 750, air_icon_y  = 550;
 constexpr int icon_w = 60, icon_h = 60;
 
 // --- Text positions (relative to icons) ---
@@ -106,7 +106,7 @@ void Page::draw() {
         display.setFont(&FreeSansBold24pt7b);
         display.setTextColor(BLACK, WHITE);
         display.setTextSize(1);
-        display.setCursor(rect_a_x[i] + 10, rect_a_y - 10);
+        display.setCursor(rect_a_x[i] + 5, rect_a_y - 20);
         display.print(label);
     }
     // Draw bilge circles
@@ -124,9 +124,9 @@ void Page::drawTank(int idx) {
     // --- Clear the entire tank area (including label area) ---
     // Add margin if needed to cover outline thickness and label
     int clear_x = x0 - 2;
-    int clear_y = y0 - 45; // enough to cover label above
-    int clear_w = w + 4;
-    int clear_h = h + 45;  // enough to cover label and outline
+    int clear_y = y0 - 55; // enough to cover label above
+    int clear_w = w + 10;
+    int clear_h = h + 55;  // enough to cover label and outline
     display.fillRect(clear_x, clear_y, clear_w, clear_h, WHITE);
 
     // Draw tank rectangle and fill
@@ -137,7 +137,7 @@ void Page::drawTank(int idx) {
     display.setFont(&FreeSansBold24pt7b);
     display.setTextColor(BLACK, WHITE);
     display.setTextSize(1);
-    display.setCursor(x0 + 20, y0 - 10);
+    display.setCursor(x0 + 5, y0 - 20);
     String text = String(percent[idx]) + " %";
     display.print(text);
     display.partialUpdate();
@@ -194,7 +194,7 @@ void Page::updateAirPressure() {
     display.setFont(&FreeSans18pt7b);
     display.setTextColor(BLACK, WHITE);
     display.setCursor(air_text_x, air_text_y);
-    display.print(String(airPressureValue, 0) + " hPa");
+    display.print(String(airPressureValue, 1) + " hPa");
     display.partialUpdate();
 }
 
