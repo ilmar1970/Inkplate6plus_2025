@@ -9,6 +9,8 @@ constexpr int bat_icon_x  = 40,  bat_icon_y  = 550;
 constexpr int hum_icon_x  = 500, hum_icon_y  = 550;
 constexpr int air_icon_x  = 750, air_icon_y  = 550;
 constexpr int icon_w = 60, icon_h = 60;
+constexpr int gw_x = 350; 
+constexpr int gw_y = 710;
 
 // --- Text positions (relative to icons) ---
 constexpr int temp_text_x = temp_icon_x + icon_w + 10;
@@ -113,6 +115,14 @@ void Page::draw() {
     for (int i = 0; i < bilgeCount; ++i) {
         display.drawCircle(bilge_x[i], bilge_y[i], bilge_radius, BLACK);
     }
+
+    // Centered at bottom
+    display.setFont(&FreeSans18pt7b);
+    display.setTextColor(BLACK, WHITE);
+    display.setTextSize(1);
+    display.setCursor(gw_x, gw_y);
+    display.print("GW: ");
+    display.print(gatewayStr);
 }
 
 void Page::drawTank(int idx) {
@@ -204,5 +214,15 @@ void Page::updateSeaTemp() {
     display.setTextColor(BLACK, WHITE);
     display.setCursor(temp_text_x, sea_text_y);
     display.print(String(seaTempValue, 1) + " sea");
+    display.partialUpdate();
+}
+
+void Page::updateGateway() {
+    display.fillRect(gw_x, gw_y - 30, 500, 40, WHITE); // clear area
+    display.setFont(&FreeSans18pt7b);
+    display.setTextColor(BLACK, WHITE);
+    display.setCursor(gw_x, gw_y);
+    display.print("GW: ");
+    display.print(gatewayStr);
     display.partialUpdate();
 }

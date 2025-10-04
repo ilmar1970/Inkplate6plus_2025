@@ -11,7 +11,9 @@
 #define TOPIC_IP "inkplate/log/ip"
 #define TOPIC_SUB "inkplate/control/+/state"
 #define TOPIC_BOOSTER "inkplate/control/booster"
+#define TOPIC_ARLO "inkplate/control/arlo"
 #define TOPIC_CELL "inkplate/control/cell"
+#define TOPIC_AUX1 "inkplate/control/aux1"
 #define TOPIC_STARLINK "inkplate/control/starlink"
 #define TOPIC_B_LIGHT "inkplate/control/batlight"
 #define TOPIC_B_FAN "inkplate/control/batfan"
@@ -45,19 +47,22 @@ float batValue1 = 0.0, batValue2 = 0.0, batValue3 = 0.0;
 float lastSeaTemp = -1000.0, lastAirTemp = -1000.0, lastHum = -1000.0, lastAirPressure = -1000.0;
 double airTemp = 0.0, RH = 0.0, AirPressure = 1023.546; // dummy value
 char airTempStr[16], humStr[16], pressureStr[16];
+char gwStr[32] = "-";
 
 Inkplate display(INKPLATE_1BIT);
 Page page(display);
-Display::Text title("SeaEsta", {400, 80}, 2);
-Display::Toggle wifi_toggle("Booster", TOPIC_BOOSTER, {100, 200});
-Display::Toggle cell_toggle("Cell", TOPIC_CELL, {100, 350});
-Display::Toggle starlink_toggle("Starlink", TOPIC_STARLINK, {100, 500});
-Display::Toggle ac_port_toggle("AC_Fl_Port", TOPIC_AC_PORT, {100, 650});
+//Display::Text title("SeaEsta", {400, 80}, 2);
+Display::Toggle starlink_toggle("Starlink", TOPIC_STARLINK, {100, 125});
+Display::Toggle wifi_toggle("Booster", TOPIC_BOOSTER, {100, 250});
+Display::Toggle cell_toggle("Cell", TOPIC_CELL, {100, 375});
+Display::Toggle b_light("B_Light", TOPIC_B_LIGHT, {100, 500});
+Display::Toggle ac_port_toggle("AC_Fl_Port", TOPIC_AC_PORT, {100, 625});
 
-Display::Toggle b_light("B_Light", TOPIC_B_LIGHT, {600, 200});
-Display::Toggle b_fan("B_Fan", TOPIC_B_FAN, {600, 350});
-Display::Toggle deck_wash("DeckFresh", TOPIC_DECKWASH, {600, 500});
-Display::Toggle ac_strb_toggle("AC_Fl_Stb", TOPIC_AC_STRB, {600, 650});
+Display::Toggle deck_wash("DeckFresh", TOPIC_DECKWASH, {600, 125});
+Display::Toggle arlo_toggle("Arlo", TOPIC_ARLO, {600, 250});
+Display::Toggle aux1("AUX1", TOPIC_AUX1, {600, 375});
+Display::Toggle b_fan("B_Fan", TOPIC_B_FAN, {600, 500});
+Display::Toggle ac_strb_toggle("AC_Fl_Stb", TOPIC_AC_STRB, {600, 625});
 
 struct ToggleEntry {
     const char* topic;
@@ -72,7 +77,9 @@ ToggleEntry toggles[] = {
     { TOPIC_B_FAN "/state",     &b_fan },
     { TOPIC_DECKWASH "/state",  &deck_wash },
     { TOPIC_AC_PORT "/state",   &ac_port_toggle },
-    { TOPIC_AC_STRB "/state",   &ac_strb_toggle }
+    { TOPIC_AC_STRB "/state",   &ac_strb_toggle },
+    { TOPIC_ARLO "/state",      &arlo_toggle },
+    { TOPIC_AUX1 "/state",      &aux1 },
 };
 constexpr int numToggles = sizeof(toggles) / sizeof(toggles[0]);
 
@@ -203,6 +210,15 @@ void callback(char* topic, byte* payload, unsigned int length) {
         goto log_and_return;
     }   
 
+    // --- Handle gateway ---
+    if (strcmp(topic, "info/router/gateway") == 0) {
+        strncpy(gwStr, buf, sizeof(gwStr) - 1);
+        gwStr[sizeof(gwStr) - 1] = '\0';
+        page.setGateway(gwStr); // see step 3
+        if (currentPage == INFO_PAGE) page.updateGateway();
+        goto log_and_return;
+    }
+
     // --- Log ---
     log_and_return:
     char logEntry[128];
@@ -286,11 +302,13 @@ void waitClick() {
     setupToggleListener(deck_wash, deck_wash.name);
     setupToggleListener(ac_port_toggle, ac_port_toggle.name);
     setupToggleListener(ac_strb_toggle, ac_strb_toggle.name);
+    setupToggleListener(arlo_toggle, arlo_toggle.name);
+    setupToggleListener(aux1, aux1.name);
 }
 
 void SwitchPage() { 
     display.clearDisplay(); 
-    title.draw();
+    //title.draw();
     wifi_toggle.draw(true,false);
     cell_toggle.draw(true,false);
     starlink_toggle.draw(true,false);
@@ -299,6 +317,8 @@ void SwitchPage() {
     deck_wash.draw(true,false);
     ac_port_toggle.draw(true,false);
     ac_strb_toggle.draw(true,false);
+    arlo_toggle.draw(true,false);
+    aux1.draw(true,false);
     waitClick();
     display.display();
 }
@@ -408,6 +428,8 @@ void loop() {
             deck_wash.readCheckState(*touchRecord.first);
             ac_port_toggle.readCheckState(*touchRecord.first);
             ac_strb_toggle.readCheckState(*touchRecord.first);
+            arlo_toggle.readCheckState(*touchRecord.first);
+            aux1.readCheckState(*touchRecord.first);
         } else {
             wifi_toggle.resetPress();
             cell_toggle.resetPress();
@@ -417,6 +439,8 @@ void loop() {
             deck_wash.resetPress();
             ac_port_toggle.resetPress();
             ac_strb_toggle.resetPress();
+            arlo_toggle.resetPress();
+            aux1.resetPress();
         }
     }
 

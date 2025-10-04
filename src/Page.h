@@ -37,6 +37,7 @@ public:
     void updateBat();
     void updateAirPressure();
     void updateSeaTemp();
+    void updateGateway();
 
     // Data members
     int percent[tankCount];
@@ -47,6 +48,9 @@ public:
     float airPressureValue = 0.0;
     float batValue1 = 0.0, batValue2 = 0.0, batValue3 = 0.0;
     float seaTempValue = 0.0;
+
+    char gatewayStr[32] = "-";
+    void setGateway(const char* gw) { strncpy(gatewayStr, gw, sizeof(gatewayStr) - 1); gatewayStr[sizeof(gatewayStr) - 1] = '\0'; }
 
 private:
     Inkplate& display;
