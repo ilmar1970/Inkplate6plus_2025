@@ -23,6 +23,12 @@
 #define TOPIC_ENV "inkplate/env"
 #define TOPIC_INFO "info/#" // info/victron|history/pumps|tanks/ 
 
+// add near other globals
+static uint32_t lastMqttReconnectAttempt = 0;
+static uint32_t mqttReconnectDelayMs = 1000; // start 1s
+static uint32_t lastRssiLogMs = 0;
+static const uint32_t RSSI_LOG_INTERVAL_MS = 30000;
+
 // --- sensor settings ---
 static uint32_t lastEnvMs = 60000; // force reading on first loop
 constexpr uint32_t ENV_INTERVAL_MS = 60000; // 60 seconds
@@ -96,15 +102,66 @@ void log_mqtt(const String& msg, bool error=false) {
     client.publish(TOPIC_LOG, msg.c_str());
 }
 
+void onWiFiEvent(WiFiEvent_t event) {
+    Serial.printf("WiFi event: %d, RSSI=%d\n", (int)event, WiFi.RSSI());
+    if (event == ARDUINO_EVENT_WIFI_STA_DISCONNECTED) {
+        Serial.println("WiFi disconnected");
+    } else if (event == ARDUINO_EVENT_WIFI_STA_GOT_IP) {
+        Serial.printf("WiFi got IP: %s\n", WiFi.localIP().toString().c_str());
+    }
+}
+
 void setup_wifi() {
     WiFi.mode(WIFI_STA);
+    WiFi.setAutoReconnect(true);
+    WiFi.persistent(true);
+    WiFi.onEvent(onWiFiEvent);
     WiFi.begin(ssid, password);
     Serial.print("Connecting to WiFi ..");
-    while (WiFi.status() != WL_CONNECTED) {
+    uint32_t start = millis();
+    // wait a short time, don't block indefinitely
+    while (WiFi.status() != WL_CONNECTED && (millis() - start) < 10000) {
         Serial.print('.');
-        delay(1000);
+        delay(500);
     }
-    Serial.println(WiFi.localIP());
+    if (WiFi.status() != WL_CONNECTED) {
+        Serial.println(" WiFi not connected at setup (will retry in loop)");
+    }
+}
+
+// replace blocking reconnect() with non-blocking attempt + exponential backoff
+void reconnect() {
+    // Non-blocking single-attempt reconnect with exponential backoff
+    uint32_t now = millis();
+    if (WiFi.status() != WL_CONNECTED) {
+        if (now - lastRssiLogMs > RSSI_LOG_INTERVAL_MS) {
+            Serial.printf("WiFi status=%d, RSSI=%d\n", WiFi.status(), WiFi.RSSI());
+            lastRssiLogMs = now;
+        }
+        return;
+    }
+
+    // only attempt when backoff elapsed
+    if (now - lastMqttReconnectAttempt < mqttReconnectDelayMs) return;
+    lastMqttReconnectAttempt = now;
+
+    Serial.print("Attempting MQTT connection...");
+    if (client.connect(client_id, mqtt_user, mqtt_pass)) {
+        Serial.println("connected");
+        client.subscribe(TOPIC_SUB);
+        client.subscribe(TOPIC_INFO);
+        IPAddress ip = WiFi.localIP();
+        String ipStr = ip.toString();
+        client.publish(TOPIC_IP, ipStr.c_str());
+        log_mqtt("Connected to MQTT my IP: " + ipStr);
+        // reset backoff on success
+        mqttReconnectDelayMs = 1000;
+    } else {
+        int rc = client.state();
+        Serial.printf("failed, rc=%d. Backoff %ums\n", rc, mqttReconnectDelayMs);
+        // exponential backoff (cap)
+        mqttReconnectDelayMs = min(mqttReconnectDelayMs * 2, (uint32_t)60000);
+    }
 }
 
 void callback(char* topic, byte* payload, unsigned int length) {
@@ -259,26 +316,6 @@ void callback(char* topic, byte* payload, unsigned int length) {
     log_mqtt(logEntry);
 }
 
-void reconnect() {
-    while (!client.connected()) {
-        Serial.print("Attempting MQTT connection...");
-        if (client.connect(client_id, mqtt_user, mqtt_pass)) {
-            Serial.println("connected");
-            client.subscribe(TOPIC_SUB);
-            client.subscribe(TOPIC_INFO);
-            IPAddress ip = WiFi.localIP();
-            String ipStr = ip.toString();
-            client.publish(TOPIC_IP, ipStr.c_str());
-            log_mqtt("Connected to MQTT my IP: " + ipStr);
-        } else {
-            Serial.print("failed, rc=");
-            Serial.print(client.state());
-            Serial.println(". Trying again in 5s");
-            delay(5000);
-        }
-    }
-}
-
 void initDisplay() {
     display.setInkplatePowerMode(INKPLATE_USB_PWR_ONLY);
     display.begin();
@@ -309,7 +346,6 @@ inline bool wakeOnAnyTap() {
     }
     return false;
 }
-
 
 void setupToggleListener(Display::Toggle& toggle, const char* topic) {
     // topic is the command topic, e.g. "inkplate/control/fridge_fan"
@@ -414,29 +450,36 @@ void setup() {
     client.setServer(mqtt_server, mqtt_port);
     client.setKeepAlive(60);
     client.setCallback(callback);
-    if (WiFi.status() == WL_CONNECTED) {
-        log_mqtt("WiFi connected. IP address: " + WiFi.localIP().toString());
-    }
     if (! hdc.begin(0x46, &Wire)) {
         Serial.println("Could not find sensor?");
         while (1);
     }
-    delay(1000);
+    delay(500);
     for (int i = 0; i < numToggles; ++i) toggleActive[i] = true;
     InfoPage();
 }
 
 
 void loop() {
+    // let WiFi auto-reconnect; avoid calling WiFi.reconnect() each loop
     if (WiFi.status() != WL_CONNECTED) {
-        Serial.println("WiFi reconnect ...");
-        WiFi.reconnect();
-        delay(500);
+        // log RSSI occasionally and yield to WiFi task
+        if (millis() - lastRssiLogMs > RSSI_LOG_INTERVAL_MS) {
+            Serial.printf("WiFi status=%d, RSSI=%d\n", WiFi.status(), WiFi.RSSI());
+            lastRssiLogMs = millis();
+        }
+        delay(200); // small delay to avoid spin
         return;
     }
+
+    // Ensure MQTT connection (non-blocking, backoff)
     if (!client.connected()) {
         reconnect();
+    } else {
+        // reset backoff safety if already connected
+        mqttReconnectDelayMs = 1000;
     }
+
     client.loop();
     if (wakeOnAnyTap()) {
         // Skip processing toggles this iteration to avoid accidental toggle on wake
@@ -477,4 +520,6 @@ void loop() {
         getEnv();
     }
 }
+
+
 
