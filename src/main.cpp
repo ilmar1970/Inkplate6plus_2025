@@ -13,7 +13,7 @@
 #define TOPIC_BOOSTER "inkplate/control/booster"
 #define TOPIC_ARLO "inkplate/control/arlo"
 #define TOPIC_CELL "inkplate/control/cell"
-#define TOPIC_AUX1 "inkplate/control/aux1"
+#define TOPIC_FRIDGEFAN "inkplate/control/fridgefan"
 #define TOPIC_STARLINK "inkplate/control/starlink"
 #define TOPIC_B_LIGHT "inkplate/control/batlight"
 #define TOPIC_B_FAN "inkplate/control/batfan"
@@ -25,7 +25,7 @@
 
 // --- sensor settings ---
 static uint32_t lastEnvMs = 60000; // force reading on first loop
-constexpr uint32_t ENV_INTERVAL_MS = 30000; // 60 seconds
+constexpr uint32_t ENV_INTERVAL_MS = 60000; // 60 seconds
 
 // --- Backlight control ---
 constexpr uint32_t BACKLIGHT_TIMEOUT_MS = 60000; // 60s (adjust as you like)
@@ -60,7 +60,7 @@ Display::Toggle ac_port_toggle("AC_Fl_Port", TOPIC_AC_PORT, {100, 625});
 
 Display::Toggle deck_wash("DeckFresh", TOPIC_DECKWASH, {600, 125});
 Display::Toggle arlo_toggle("Arlo", TOPIC_ARLO, {600, 250});
-Display::Toggle aux1("AUX1", TOPIC_AUX1, {600, 375});
+Display::Toggle fridge_fan("FridgeFan", TOPIC_FRIDGEFAN, {600, 375});
 Display::Toggle b_fan("B_Fan", TOPIC_B_FAN, {600, 500});
 Display::Toggle ac_strb_toggle("AC_Fl_Stb", TOPIC_AC_STRB, {600, 625});
 
@@ -79,9 +79,11 @@ ToggleEntry toggles[] = {
     { TOPIC_AC_PORT "/state",   &ac_port_toggle },
     { TOPIC_AC_STRB "/state",   &ac_strb_toggle },
     { TOPIC_ARLO "/state",      &arlo_toggle },
-    { TOPIC_AUX1 "/state",      &aux1 },
+    { TOPIC_FRIDGEFAN "/state",      &fridge_fan },
 };
 constexpr int numToggles = sizeof(toggles) / sizeof(toggles[0]);
+static bool toggleActive[numToggles];   // true => accepts touches and shows normal UI
+
 
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -219,6 +221,37 @@ void callback(char* topic, byte* payload, unsigned int length) {
         goto log_and_return;
     }
 
+    // --- Handle breaker toggles ---
+    if (strncmp(topic, "info/breaker/", 13) == 0) {
+        const char* last = strrchr(topic, '/');
+        if (last) {
+            const char* nameSeg = last + 1; // e.g. "starlink" or "fridgefan"
+            for (int i = 0; i < numToggles; ++i) {
+                // derive the toggle token from toggles[i].topic (segment before final "/state")
+                const char* t = toggles[i].topic;
+                const char* q = strrchr(t, '/');
+                if (!q) continue;
+                const char* p = q;
+                while (p > t && *p != '/') --p;
+                const char* token = p + 1;
+                if (strcasecmp(token, nameSeg) == 0) {
+                    int v = atoi(buf);           // buf is your null-terminated payload
+                    bool active = (v != 0);
+                    toggleActive[i] = active;
+                    if (!active) {
+                        // visually clear inner area (outline + label remain)
+                        toggles[i].toggle->clearButtonArea();
+                    } else {
+                        // restore visual according to stored state
+                        toggles[i].toggle->draw(currentPage == SWITCH_PAGE);
+                    }
+                    break;
+                }
+            }
+        }
+        goto log_and_return;
+    }
+
     // --- Log ---
     log_and_return:
     char logEntry[128];
@@ -279,7 +312,7 @@ inline bool wakeOnAnyTap() {
 
 
 void setupToggleListener(Display::Toggle& toggle, const char* topic) {
-    // topic is the command topic, e.g. "inkplate/control/aux1"
+    // topic is the command topic, e.g. "inkplate/control/fridge_fan"
     toggle.onClickListener = [topic](Display::Toggle* t) {
         if (millis() < wakeGuardUntilMs) return;
         lastInteractionMs = millis();
@@ -303,7 +336,7 @@ void waitClick() {
     setupToggleListener(ac_port_toggle, ac_port_toggle.name);
     setupToggleListener(ac_strb_toggle, ac_strb_toggle.name);
     setupToggleListener(arlo_toggle, arlo_toggle.name);
-    setupToggleListener(aux1, aux1.name);
+    setupToggleListener(fridge_fan, fridge_fan.name);
 }
 
 void SwitchPage() { 
@@ -318,7 +351,7 @@ void SwitchPage() {
     ac_port_toggle.draw(true,false);
     ac_strb_toggle.draw(true,false);
     arlo_toggle.draw(true,false);
-    aux1.draw(true,false);
+    fridge_fan.draw(true,false);
     waitClick();
     display.display();
 }
@@ -389,6 +422,7 @@ void setup() {
         while (1);
     }
     delay(1000);
+    for (int i = 0; i < numToggles; ++i) toggleActive[i] = true;
     InfoPage();
 }
 
@@ -420,27 +454,14 @@ void loop() {
 
     if (currentPage == SWITCH_PAGE) {
         if (touchRecord.second == 1 && touchRecord.first != nullptr) {
-            wifi_toggle.readCheckState(*touchRecord.first);
-            cell_toggle.readCheckState(*touchRecord.first);
-            starlink_toggle.readCheckState(*touchRecord.first);
-            b_light.readCheckState(*touchRecord.first);
-            b_fan.readCheckState(*touchRecord.first);
-            deck_wash.readCheckState(*touchRecord.first);
-            ac_port_toggle.readCheckState(*touchRecord.first);
-            ac_strb_toggle.readCheckState(*touchRecord.first);
-            arlo_toggle.readCheckState(*touchRecord.first);
-            aux1.readCheckState(*touchRecord.first);
+            // dispatch touch only to active toggles
+            for (int i = 0; i < numToggles; ++i) {
+                if (!toggleActive[i]) continue;
+                toggles[i].toggle->readCheckState(*touchRecord.first);
+            }
         } else {
-            wifi_toggle.resetPress();
-            cell_toggle.resetPress();
-            starlink_toggle.resetPress();
-            b_light.resetPress();
-            b_fan.resetPress();
-            deck_wash.resetPress();
-            ac_port_toggle.resetPress();
-            ac_strb_toggle.resetPress();
-            arlo_toggle.resetPress();
-            aux1.resetPress();
+            // reset press state for all toggles
+            for (int i = 0; i < numToggles; ++i) toggles[i].toggle->resetPress();
         }
     }
 

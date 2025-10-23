@@ -58,7 +58,11 @@ namespace Display {
             void disable();
             void resetPress();
             void clearButtonArea();
+            void setActive(bool a);
+            bool isActive() const;
 
+        private:
+            bool active = true;
     };
 
 }
