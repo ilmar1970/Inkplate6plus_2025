@@ -71,22 +71,23 @@ Display::Toggle b_fan("B_Fan", TOPIC_B_FAN, {600, 500});
 Display::Toggle ac_strb_toggle("AC_Fl_Stb", TOPIC_AC_STRB, {600, 625});
 
 struct ToggleEntry {
-    const char* topic;
+    const char* toggle_name;
     Display::Toggle* toggle;
 };
 
 ToggleEntry toggles[] = {
-    { TOPIC_BOOSTER "/state",   &wifi_toggle },
-    { TOPIC_CELL "/state",      &cell_toggle },
-    { TOPIC_STARLINK "/state",  &starlink_toggle },
-    { TOPIC_B_LIGHT "/state",   &b_light },
-    { TOPIC_B_FAN "/state",     &b_fan },
-    { TOPIC_DECKWASH "/state",  &deck_wash },
-    { TOPIC_AC_PORT "/state",   &ac_port_toggle },
-    { TOPIC_AC_STRB "/state",   &ac_strb_toggle },
-    { TOPIC_ARLO "/state",      &arlo_toggle },
-    { TOPIC_FRIDGEFAN "/state",      &fridge_fan },
+    { "booster",   &wifi_toggle },
+    { "cell",      &cell_toggle },
+    { "starlink",  &starlink_toggle },
+    { "batlight",   &b_light },
+    { "batfan",     &b_fan },
+    { "deckwash",  &deck_wash },
+    { "acport",   &ac_port_toggle },
+    { "acstrb",   &ac_strb_toggle },
+    { "arlo",      &arlo_toggle },
+    { "fridgefan",      &fridge_fan },
 };
+
 constexpr int numToggles = sizeof(toggles) / sizeof(toggles[0]);
 static bool toggleActive[numToggles];   // true => accepts touches and shows normal UI
 
@@ -173,13 +174,40 @@ void callback(char* topic, byte* payload, unsigned int length) {
     bool on = (length == 1 && payload[0] == '1');
 
     // --- Handle toggles ---
-    for (int i = 0; i < numToggles; ++i) {
-        if (strcmp(topic, toggles[i].topic) == 0) {
-            toggles[i].toggle->state = on;
-            toggles[i].toggle->draw(currentPage == SWITCH_PAGE);
-            goto log_and_return;
+    if (strncmp(topic, "inkplate/control/", 17) == 0) {
+        char *token;
+        char *rest = topic;
+        token = strtok_r(rest, "/", &rest);  // "inkplate"
+        token = strtok_r(rest, "/", &rest);  // "control"
+        char *name = strtok_r(rest, "/", &rest);
+        char *state = strtok_r(rest, "/", &rest);
+        Serial.printf("Toggle command: name=%s state=%s on=%d\n", name, state, on);
+        // topic expected: "inkplate/control/<name>/state"
+        if (state && strcmp(state, "state") == 0) {
+            for (int i = 0; i < numToggles; ++i) {
+                if (strcmp(name, toggles[i].toggle_name) == 0) {
+                    toggles[i].toggle->state = on;
+                    toggles[i].toggle->draw(currentPage == SWITCH_PAGE);
+                    goto log_and_return;
+                }
+            }
         }
     }
+
+    if (strncmp(topic, "info/breaker", 12) == 0) {
+            const char* last = strrchr(topic, '/');
+            if (last) {
+                const char* nameSeg = last + 1;
+                for (int i = 0; i < numToggles; ++i) {
+                    if (strcmp(nameSeg, toggles[i].toggle_name) == 0) {
+                        if (currentPage == SWITCH_PAGE) {
+                            on ? toggles[i].toggle->draw() : toggles[i].toggle->clearButtonArea();
+                        }
+                        goto log_and_return;
+                    }
+                }
+            }
+        }
 
     // --- Handle tanks ---
     if (strncmp(topic, "info/victron/tanks", 18) == 0) {
@@ -278,37 +306,6 @@ void callback(char* topic, byte* payload, unsigned int length) {
         goto log_and_return;
     }
 
-    // --- Handle breaker toggles ---
-    if (strncmp(topic, "info/breaker/", 13) == 0) {
-        const char* last = strrchr(topic, '/');
-        if (last) {
-            const char* nameSeg = last + 1; // e.g. "starlink" or "fridgefan"
-            for (int i = 0; i < numToggles; ++i) {
-                // derive the toggle token from toggles[i].topic (segment before final "/state")
-                const char* t = toggles[i].topic;
-                const char* q = strrchr(t, '/');
-                if (!q) continue;
-                const char* p = q;
-                while (p > t && *p != '/') --p;
-                const char* token = p + 1;
-                if (strcasecmp(token, nameSeg) == 0) {
-                    int v = atoi(buf);           // buf is your null-terminated payload
-                    bool active = (v != 0);
-                    toggleActive[i] = active;
-                    if (!active) {
-                        // visually clear inner area (outline + label remain)
-                        toggles[i].toggle->clearButtonArea();
-                    } else {
-                        // restore visual according to stored state
-                        toggles[i].toggle->draw(currentPage == SWITCH_PAGE);
-                    }
-                    break;
-                }
-            }
-        }
-        goto log_and_return;
-    }
-
     // --- Log ---
     log_and_return:
     char logEntry[128];
@@ -356,7 +353,6 @@ void setupToggleListener(Display::Toggle& toggle, const char* topic) {
         bool ok = client.publish(topic, payload, false);
         String s = String("CMD [") + topic + "] => " + payload + (ok ? "" : " (fail)");
         log_mqtt(s.c_str());
-
         // Immediately clear the button area (show pending)
         t->clearButtonArea();
     };
