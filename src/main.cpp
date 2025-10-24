@@ -73,23 +73,24 @@ Display::Toggle ac_strb_toggle("AC_Fl_Stb", TOPIC_AC_STRB, {600, 625});
 struct ToggleEntry {
     const char* toggle_name;
     Display::Toggle* toggle;
+    bool active;          // new: whether toggle is active (accepts touches / shows circle)
 };
 
 ToggleEntry toggles[] = {
-    { "booster",   &wifi_toggle },
-    { "cell",      &cell_toggle },
-    { "starlink",  &starlink_toggle },
-    { "batlight",   &b_light },
-    { "batfan",     &b_fan },
-    { "deckwash",  &deck_wash },
-    { "acport",   &ac_port_toggle },
-    { "acstrb",   &ac_strb_toggle },
-    { "arlo",      &arlo_toggle },
-    { "fridgefan",      &fridge_fan },
+    { "booster",   &wifi_toggle,  true },
+    { "cell",      &cell_toggle,  true },
+    { "starlink",  &starlink_toggle, true },
+    { "batlight",  &b_light,      true },
+    { "batfan",    &b_fan,        true },
+    { "deckwash",  &deck_wash,    true },
+    { "acport",    &ac_port_toggle, true },
+    { "acstrb",    &ac_strb_toggle, true },
+    { "arlo",      &arlo_toggle,  true },
+    { "fridgefan", &fridge_fan,   true },
 };
 
 constexpr int numToggles = sizeof(toggles) / sizeof(toggles[0]);
-static bool toggleActive[numToggles];   // true => accepts touches and shows normal UI
+//static bool toggleActive[numToggles];   // true => accepts touches and shows normal UI
 
 
 WiFiClient espClient;
@@ -171,12 +172,20 @@ void callback(char* topic, byte* payload, unsigned int length) {
     size_t len = (length < sizeof(buf) - 1) ? length : sizeof(buf) - 1;
     memcpy(buf, payload, len);
     buf[len] = '\0';
+
+    // debug: log every incoming message (use trimmed buf)
+    Serial.printf("MQTT => topic='%s' payload='%s' len=%u\n", topic, buf, (unsigned)length);
+
     bool on = (length == 1 && payload[0] == '1');
 
     // --- Handle toggles ---
     if (strncmp(topic, "inkplate/control/", 17) == 0) {
+        // don't mutate 'topic' — make a local copy for tokenizing
+        char topicCopy[128];
+        strncpy(topicCopy, topic, sizeof(topicCopy) - 1);
+        topicCopy[sizeof(topicCopy) - 1] = '\0';
         char *token;
-        char *rest = topic;
+        char *rest = topicCopy;
         token = strtok_r(rest, "/", &rest);  // "inkplate"
         token = strtok_r(rest, "/", &rest);  // "control"
         char *name = strtok_r(rest, "/", &rest);
@@ -195,19 +204,24 @@ void callback(char* topic, byte* payload, unsigned int length) {
     }
 
     if (strncmp(topic, "info/breaker", 12) == 0) {
-            const char* last = strrchr(topic, '/');
-            if (last) {
-                const char* nameSeg = last + 1;
-                for (int i = 0; i < numToggles; ++i) {
-                    if (strcmp(nameSeg, toggles[i].toggle_name) == 0) {
-                        if (currentPage == SWITCH_PAGE) {
-                            on ? toggles[i].toggle->draw() : toggles[i].toggle->clearButtonArea();
-                        }
-                        goto log_and_return;
+        const char* last = strrchr(topic, '/');
+        if (last) {
+            const char* nameSeg = last + 1;
+            for (int i = 0; i < numToggles; ++i) {
+                if (strcmp(nameSeg, toggles[i].toggle_name) == 0) {
+                    // update active flag always (on==1 => active)
+                    toggles[i].active = on;
+                    // update visual immediately only if SWITCH_PAGE is visible
+                    if (currentPage == SWITCH_PAGE) {
+                        if (on) toggles[i].toggle->draw(true, true);
+                        else toggles[i].toggle->clearButtonArea();
+                        display.partialUpdate();
                     }
+                    goto log_and_return;
                 }
             }
         }
+    }
 
     // --- Handle tanks ---
     if (strncmp(topic, "info/victron/tanks", 18) == 0) {
@@ -384,6 +398,10 @@ void SwitchPage() {
     ac_strb_toggle.draw(true,false);
     arlo_toggle.draw(true,false);
     fridge_fan.draw(true,false);
+    // ensure inactive toggles show cleared inner area on page build
+    for (int i = 0; i < numToggles; ++i) {
+        if (!toggles[i].active) toggles[i].toggle->clearButtonArea();
+    }
     waitClick();
     display.display();
 }
@@ -451,7 +469,7 @@ void setup() {
         while (1);
     }
     delay(500);
-    for (int i = 0; i < numToggles; ++i) toggleActive[i] = true;
+    for (int i = 0; i < numToggles; ++i) toggles[i].active = true;
     InfoPage();
 }
 
@@ -495,7 +513,7 @@ void loop() {
         if (touchRecord.second == 1 && touchRecord.first != nullptr) {
             // dispatch touch only to active toggles
             for (int i = 0; i < numToggles; ++i) {
-                if (!toggleActive[i]) continue;
+                if (!toggles[i].active) continue;
                 toggles[i].toggle->readCheckState(*touchRecord.first);
             }
         } else {
