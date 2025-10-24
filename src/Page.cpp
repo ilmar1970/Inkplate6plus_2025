@@ -4,24 +4,24 @@
 #include <Fonts/FreeSansBold24pt7b.h>
 
 // --- Icon and text positions for bottom row ---
-constexpr int temp_icon_x = 265, temp_icon_y = 550;
 constexpr int bat_icon_x  = 40,  bat_icon_y  = 550;
-constexpr int hum_icon_x  = 495, hum_icon_y  = 550;
-constexpr int air_icon_x  = 750, air_icon_y  = 550;
+constexpr int temp_icon_x = 275, temp_icon_y = 550;
+constexpr int hum_icon_x  = 535, hum_icon_y  = 550;
+constexpr int air_icon_x  = 760, air_icon_y  = 550;
 constexpr int icon_w = 60, icon_h = 60;
 constexpr int gw_x = 350; 
 constexpr int gw_y = 710;
 
 // --- Text positions (relative to icons) ---
 constexpr int next_line = 35;
-constexpr int temp_text_x = temp_icon_x + icon_w + 7; // 340
+constexpr int temp_text_x = temp_icon_x + icon_w + 5; // 340
 constexpr int temp_text_y = temp_icon_y + icon_h - 10; // 600
 constexpr int sea_text_y = temp_text_y + next_line; // 635
 
 constexpr int bat_text_x = bat_icon_x + icon_w + 20; // 120
 constexpr int bat_text_y = bat_icon_y + 15; // 605
 
-constexpr int hum_text_x = hum_icon_x + icon_w + 7; // 570
+constexpr int hum_text_x = hum_icon_x + icon_w + 5; // 570
 constexpr int hum_text_y = hum_icon_y + icon_h - 10; // 600
 
 constexpr int air_text_x = air_icon_x + icon_w + 8; // 760
@@ -81,12 +81,11 @@ void Page::draw() {
     display.setTextColor(BLACK, WHITE);
     display.setTextSize(1);
     display.setCursor(temp_text_x, temp_text_y - next_line);
-    display.print(String(outTempValue, 1) + " Out");
+    display.print(String(outTempValue, 1) + " C out");
     display.setCursor(temp_text_x, temp_text_y);
-    display.print(String(tempValue, 1) + " In");
+    display.print(String(tempValue, 1) + " C in");
     display.setCursor(temp_text_x, sea_text_y);
-    display.print(String(seaTempValue, 1) + " Sea");
-
+    display.print(String(seaTempValue, 1) + " C sea");
     // humidity 
     display.setFont(&FreeSans18pt7b);
     display.setTextColor(BLACK, WHITE);
@@ -207,7 +206,7 @@ void Page::updateOutTemp() {
     display.setFont(&FreeSans18pt7b);
     display.setTextColor(BLACK, WHITE);
     display.setCursor(x, outY);
-    display.print(String(outTempValue, 1) + " Out");
+    display.print(String(outTempValue, 1) + " C out");
     display.partialUpdate();
 }
 
@@ -222,7 +221,7 @@ void Page::updateTemp() {
     display.setFont(&FreeSans18pt7b);
     display.setTextColor(BLACK, WHITE);
     display.setCursor(x, outY);
-    display.print(String(tempValue, 1) + " In");
+    display.print(String(tempValue, 1) + " C in");
     display.partialUpdate();
 }
 
@@ -237,7 +236,7 @@ void Page::updateSeaTemp() {
     display.setFont(&FreeSans18pt7b);
     display.setTextColor(BLACK, WHITE);
     display.setCursor(x, outY);
-    display.print(String(seaTempValue, 1) + " Sea");
+    display.print(String(seaTempValue, 1) + " C sea");
     display.partialUpdate();
 }
 

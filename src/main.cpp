@@ -51,6 +51,10 @@ static Page2 currentPage = INFO_PAGE;
 static uint32_t lastRedrawMs = 0;
 constexpr uint32_t FULL_REDRAW_INTERVAL_MS = 600000; // 10 minutes
 
+// auto-return timeout: when user goes to SWITCH_PAGE, return to INFO_PAGE after 30s
+static uint32_t switchPageEntryMs = 0;
+constexpr uint32_t INFO_PAGE_TIMEOUT_MS = 30000; // 30 seconds
+
 int fuelPort = 0, fuelStb = 0, waterPort = 0, waterStb = 0, soc = 0;
 float batValue1 = 0.0, batValue2 = 0.0, batValue3 = 0.0;
 float lastSeaTemp = -1000.0, lastAirTemp = -1000.0, lastHum = -1000.0, lastAirPressure = -1000.0;
@@ -440,8 +444,14 @@ void InfoPage() {
 
 void changePage() {
     lastInteractionMs = millis();
+    // toggle page
     currentPage = (currentPage == INFO_PAGE) ? SWITCH_PAGE : INFO_PAGE;
-    //Serial.println("Two fingers - switch page");
+    // when entering INFO_PAGE start timeout; when leaving, clear it
+    if (currentPage == INFO_PAGE) {
+        switchPageEntryMs = millis();
+    } else {
+        switchPageEntryMs = 0;
+    }
     if (currentPage == INFO_PAGE) InfoPage();
     else SwitchPage();
 }
@@ -510,7 +520,6 @@ void loop() {
         delay(200); // small delay to avoid spin
         return;
     }
-
     // Ensure MQTT connection (non-blocking, backoff)
     if (!client.connected()) {
         reconnect();
@@ -518,7 +527,6 @@ void loop() {
         // reset backoff safety if already connected
         mqttReconnectDelayMs = 1000;
     }
-
     client.loop();
     if (wakeOnAnyTap()) {
         // Skip processing toggles this iteration to avoid accidental toggle on wake
@@ -529,11 +537,8 @@ void loop() {
         display.setFrontlight(FRONTLIGHT_OFF_LEVEL);
         backlightOn = false;
     }
-    
     auto touchRecord = Display::readTouchData();
-
     if (touchRecord.second > 1) {changePage();}
-
     if (currentPage == SWITCH_PAGE) {
         if (touchRecord.second == 1 && touchRecord.first != nullptr) {
             // dispatch touch only to active toggles
@@ -547,7 +552,7 @@ void loop() {
         }
     }
 
-    // Full redraw every 5 minutes
+    // Full redraw every x minutes
     if (!backlightOn && (millis() - lastRedrawMs > FULL_REDRAW_INTERVAL_MS)) {
         lastRedrawMs = millis();
         if (currentPage == SWITCH_PAGE) SwitchPage();
@@ -557,6 +562,20 @@ void loop() {
     if (millis() - lastEnvMs > ENV_INTERVAL_MS) {
         lastEnvMs = millis();
         getEnv();
+    }
+
+    // Auto-return from INFO_PAGE after timeout (30s)
+    if (currentPage == SWITCH_PAGE && switchPageEntryMs != 0) {
+        if (millis() - switchPageEntryMs >= INFO_PAGE_TIMEOUT_MS) {
+            // only switch if not interacting very recently
+            // prevents immediate flip if user just tapped
+            if (millis() - lastInteractionMs > 200) {
+                changePage(); // will clear switchPageEntryMs inside changePage()
+            } else {
+                // postpone a bit: reset entry time so we wait INFO_PAGE_TIMEOUT_MS after last interaction
+                switchPageEntryMs = millis();
+            }
+        }
     }
 }
 
