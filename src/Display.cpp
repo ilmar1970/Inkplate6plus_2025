@@ -106,7 +106,7 @@ std::pair<DisplayCoordinates*, uint16_t> Display::readTouchData() {
     return {nullptr, 0};
 }
 
-void Display::Toggle::clearButtonArea() {
+void Display::Toggle::clearButtonArea(bool is_partial) {
     int x = rectPosition.first;
     int y = rectPosition.second;
     int w = buttonWidth;
@@ -114,6 +114,8 @@ void Display::Toggle::clearButtonArea() {
     display->fillRect(x, y, w, h, WHITE);
     // Redraw the outline so the button shape remains visible
     display->drawRoundRect(x, y, w, h, rectRadius, BLACK);
-    display->partialUpdate();
+    if (is_partial){
+        display->partialUpdate();
+    }
 }
 

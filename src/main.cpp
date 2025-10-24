@@ -53,7 +53,7 @@ constexpr uint32_t FULL_REDRAW_INTERVAL_MS = 600000; // 10 minutes
 
 // auto-return timeout: when user goes to SWITCH_PAGE, return to INFO_PAGE after 30s
 static uint32_t switchPageEntryMs = 0;
-constexpr uint32_t INFO_PAGE_TIMEOUT_MS = 30000; // 30 seconds
+constexpr uint32_t SWITCH_PAGE_TIMEOUT_MS = 30000; // 30 seconds
 
 int fuelPort = 0, fuelStb = 0, waterPort = 0, waterStb = 0, soc = 0;
 float batValue1 = 0.0, batValue2 = 0.0, batValue3 = 0.0;
@@ -415,7 +415,7 @@ void waitClick() {
 }
 
 void SwitchPage() { 
-    display.clearDisplay(); 
+    display.clearDisplay();
     //title.draw();
     wifi_toggle.draw(true,false);
     cell_toggle.draw(true,false);
@@ -427,9 +427,10 @@ void SwitchPage() {
     ac_strb_toggle.draw(true,false);
     arlo_toggle.draw(true,false);
     fridge_fan.draw(true,false);
+
     // ensure inactive toggles show cleared inner area on page build
     for (int i = 0; i < numToggles; ++i) {
-        if (!toggles[i].active) toggles[i].toggle->clearButtonArea();
+        if (!toggles[i].active) toggles[i].toggle->clearButtonArea(false);
     }
     waitClick();
     display.display();
@@ -441,13 +442,12 @@ void InfoPage() {
     display.display();
 }
 
-
 void changePage() {
     lastInteractionMs = millis();
     // toggle page
     currentPage = (currentPage == INFO_PAGE) ? SWITCH_PAGE : INFO_PAGE;
-    // when entering INFO_PAGE start timeout; when leaving, clear it
-    if (currentPage == INFO_PAGE) {
+    // when entering SWITCH_PAGE start timeout; when leaving, clear it
+    if (currentPage == SWITCH_PAGE) {
         switchPageEntryMs = millis();
     } else {
         switchPageEntryMs = 0;
@@ -455,7 +455,6 @@ void changePage() {
     if (currentPage == INFO_PAGE) InfoPage();
     else SwitchPage();
 }
-
 
 inline double round_1dp(double x) { return std::round(x * 10.0) / 10.0; }
 
@@ -564,15 +563,14 @@ void loop() {
         getEnv();
     }
 
-    // Auto-return from INFO_PAGE after timeout (30s)
+    // Auto-return from SWITCH_PAGE to INFO_PAGE after timeout
     if (currentPage == SWITCH_PAGE && switchPageEntryMs != 0) {
-        if (millis() - switchPageEntryMs >= INFO_PAGE_TIMEOUT_MS) {
-            // only switch if not interacting very recently
-            // prevents immediate flip if user just tapped
+        if (millis() - switchPageEntryMs >= SWITCH_PAGE_TIMEOUT_MS) {
+            // only switch if not interacting very recently (prevent immediate flip after a tap)
             if (millis() - lastInteractionMs > 200) {
-                changePage(); // will clear switchPageEntryMs inside changePage()
+                changePage(); // toggles to INFO_PAGE and clears switchPageEntryMs
             } else {
-                // postpone a bit: reset entry time so we wait INFO_PAGE_TIMEOUT_MS after last interaction
+                // postpone: restart timeout so we wait SWITCH_PAGE_TIMEOUT_MS after last interaction
                 switchPageEntryMs = millis();
             }
         }
