@@ -5,6 +5,8 @@
 #include <Inkplate.h>         // Inkplate library
 #include "Page.h" 
 #include <Adafruit_HDC302x.h>
+#include <ArduinoJson.h>
+
 
 #define TOPIC_LOG "inkplate/log/info"
 #define TOPIC_ERROR "inkplate/log/last_error"
@@ -21,6 +23,7 @@
 #define TOPIC_AC_PORT "inkplate/control/acport"
 #define TOPIC_AC_STRB "inkplate/control/acstrb"
 #define TOPIC_ENV "inkplate/env"
+#define TOPIC_OUT_ENV "seed/env/outside"
 #define TOPIC_INFO "info/#" // info/victron|history/pumps|tanks/ 
 
 // add near other globals
@@ -152,6 +155,7 @@ void reconnect() {
         Serial.println("connected");
         client.subscribe(TOPIC_SUB);
         client.subscribe(TOPIC_INFO);
+        client.subscribe(TOPIC_OUT_ENV);
         IPAddress ip = WiFi.localIP();
         String ipStr = ip.toString();
         client.publish(TOPIC_IP, ipStr.c_str());
@@ -172,10 +176,8 @@ void callback(char* topic, byte* payload, unsigned int length) {
     size_t len = (length < sizeof(buf) - 1) ? length : sizeof(buf) - 1;
     memcpy(buf, payload, len);
     buf[len] = '\0';
-
     // debug: log every incoming message (use trimmed buf)
-    Serial.printf("MQTT => topic='%s' payload='%s' len=%u\n", topic, buf, (unsigned)length);
-
+    //Serial.printf("MQTT => topic='%s' payload='%s' len=%u\n", topic, buf, (unsigned)length);
     bool on = (length == 1 && payload[0] == '1');
 
     // --- Handle toggles ---
@@ -190,7 +192,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
         token = strtok_r(rest, "/", &rest);  // "control"
         char *name = strtok_r(rest, "/", &rest);
         char *state = strtok_r(rest, "/", &rest);
-        Serial.printf("Toggle command: name=%s state=%s on=%d\n", name, state, on);
+        //Serial.printf("Toggle command: name=%s state=%s on=%d\n", name, state, on);
         // topic expected: "inkplate/control/<name>/state"
         if (state && strcmp(state, "state") == 0) {
             for (int i = 0; i < numToggles; ++i) {
@@ -317,6 +319,29 @@ void callback(char* topic, byte* payload, unsigned int length) {
         gwStr[sizeof(gwStr) - 1] = '\0';
         page.setGateway(gwStr); // see step 3
         if (currentPage == INFO_PAGE) page.updateGateway();
+        goto log_and_return;
+    }
+
+
+    // inside your callback(char* topic, byte* payload, unsigned int length)
+    if (strcmp(topic, TOPIC_OUT_ENV) == 0) {
+        JsonDocument doc;
+        DeserializationError err = deserializeJson(doc, payload, length);
+        if (err) {
+            log_mqtt("JSON parse seed/outside/env failed");
+            goto log_and_return;
+        }
+        float out_temp = doc["t"];
+        float out_hum  = doc["h"];
+        float out_pres = doc["p"];
+        page.setOutTemp(out_temp);
+        page.setOutHum(out_hum);
+        page.setOutPres(out_pres);
+        if (currentPage == INFO_PAGE) {
+            page.updateOutTemp();
+            page.updateOutHum();
+            page.updateOutPres();
+        }
         goto log_and_return;
     }
 

@@ -4,28 +4,28 @@
 #include <Fonts/FreeSansBold24pt7b.h>
 
 // --- Icon and text positions for bottom row ---
-constexpr int temp_icon_x = 270, temp_icon_y = 550;
+constexpr int temp_icon_x = 265, temp_icon_y = 550;
 constexpr int bat_icon_x  = 40,  bat_icon_y  = 550;
-constexpr int hum_icon_x  = 500, hum_icon_y  = 550;
+constexpr int hum_icon_x  = 495, hum_icon_y  = 550;
 constexpr int air_icon_x  = 750, air_icon_y  = 550;
 constexpr int icon_w = 60, icon_h = 60;
 constexpr int gw_x = 350; 
 constexpr int gw_y = 710;
 
 // --- Text positions (relative to icons) ---
-constexpr int temp_text_x = temp_icon_x + icon_w + 10;
-constexpr int temp_text_y = temp_icon_y + icon_h - 10;
-constexpr int sea_text_y = temp_text_y + 35; // 35 pixels below air temp
+constexpr int next_line = 35;
+constexpr int temp_text_x = temp_icon_x + icon_w + 7; // 340
+constexpr int temp_text_y = temp_icon_y + icon_h - 10; // 600
+constexpr int sea_text_y = temp_text_y + next_line; // 635
 
-constexpr int bat_text_x = bat_icon_x + icon_w + 20;
-constexpr int bat_text_y = bat_icon_y + 15;
-constexpr int bat_line = 35;
+constexpr int bat_text_x = bat_icon_x + icon_w + 20; // 120
+constexpr int bat_text_y = bat_icon_y + 15; // 605
 
-constexpr int hum_text_x = hum_icon_x + icon_w + 10;
-constexpr int hum_text_y = hum_icon_y + icon_h - 10;
+constexpr int hum_text_x = hum_icon_x + icon_w + 7; // 570
+constexpr int hum_text_y = hum_icon_y + icon_h - 10; // 600
 
-constexpr int air_text_x = air_icon_x + icon_w + 10;
-constexpr int air_text_y = air_icon_y + icon_h - 10;
+constexpr int air_text_x = air_icon_x + icon_w + 8; // 760
+constexpr int air_text_y = air_icon_y + icon_h - 10; // 600
 
 const int Page::rect_a_x[Page::tankCount] = {140, 300, 460, 604, 764}; 
 const int Page::rect_b_x[Page::tankCount] = {260, 420, 564, 724, 884}; 
@@ -51,6 +51,13 @@ void Page::setBilge(int idx, int level) {
 }
 
 void Page::draw() {
+    // --- Upper icons row
+    display.drawBitmap(30, 70, bilge, 80, 60, BLACK);
+    display.drawBitmap(250, 65, diesel, 60, 60, BLACK);
+    display.drawBitmap(480, 65, bat, 60, 60, BLACK);
+    display.drawBitmap(720, 65, water, 60, 60, BLACK);
+    display.drawBitmap(910, 70, bilge, 80, 60, BLACK);
+
     // --- Draw bottom icons ---
     display.drawBitmap(temp_icon_x, temp_icon_y, temp, icon_w, icon_h, BLACK);
     display.drawBitmap(bat_icon_x,  bat_icon_y,  bat,  icon_w, icon_h, BLACK);
@@ -61,35 +68,43 @@ void Page::draw() {
     display.setTextColor(BLACK, WHITE);
     display.setTextSize(1);
 
-    // --- Temperature (right of temp icon) ---
-    display.setCursor(temp_text_x, temp_text_y);
-    display.print(String(tempValue, 1) + " C");
-    display.setCursor(temp_text_x, sea_text_y);
-    display.print(String(seaTempValue, 1) + " sea");
-
-    // --- Battery (right of bat icon, three values in a column) ---
+     // --- Battery (right of bat icon, three values in a column) ---
     display.setCursor(bat_text_x, bat_text_y);
     display.print(String(batValue1, 1) + " V");
-    display.setCursor(bat_text_x, bat_text_y + bat_line);
+    display.setCursor(bat_text_x, bat_text_y + next_line);
     display.print(String(batValue2, 1) + " V");
-    display.setCursor(bat_text_x, bat_text_y + 2 * bat_line);
+    display.setCursor(bat_text_x, bat_text_y + 2 * next_line);
     display.print(String(batValue3, 1) + " V");
 
-    // --- Humidity (right of hum icon) ---
+    //  temperature 
+    display.setFont(&FreeSans18pt7b);
+    display.setTextColor(BLACK, WHITE);
+    display.setTextSize(1);
+    display.setCursor(temp_text_x, temp_text_y - next_line);
+    display.print(String(outTempValue, 1) + " Out");
+    display.setCursor(temp_text_x, temp_text_y);
+    display.print(String(tempValue, 1) + " In");
+    display.setCursor(temp_text_x, sea_text_y);
+    display.print(String(seaTempValue, 1) + " Sea");
+
+    // humidity 
+    display.setFont(&FreeSans18pt7b);
+    display.setTextColor(BLACK, WHITE);
+    display.setTextSize(1);
+    display.setCursor(hum_text_x, hum_text_y - next_line);
+    display.print(String(outHumValue, 1) + " %");
     display.setCursor(hum_text_x, hum_text_y);
     display.print(String(humValue, 1) + " %");
 
-    // --- Air Pressure (right of air_pressure icon) ---
+    // pressure 
+    display.setFont(&FreeSans18pt7b);
+    display.setTextColor(BLACK, WHITE);
+    display.setTextSize(1);
+    display.setCursor(air_text_x, air_text_y - next_line);
+    display.print(String(outPresValue, 0) + " hPa");
     display.setCursor(air_text_x, air_text_y);
     display.print(String(airPressureValue, 0) + " hPa");
-
-    // --- Upper icons row
-    display.drawBitmap(30, 70, bilge, 80, 60, BLACK);
-    display.drawBitmap(250, 65, diesel, 60, 60, BLACK);
-    display.drawBitmap(480, 65, bat, 60, 60, BLACK);
-    display.drawBitmap(720, 65, water, 60, 60, BLACK);
-    display.drawBitmap(910, 70, bilge, 80, 60, BLACK);
-
+    
     // Draw tanks
     for (int i = 0; i < tankCount; ++i) {
         int w = rect_b_x[i] - rect_a_x[i];
@@ -153,7 +168,6 @@ void Page::drawTank(int idx) {
     display.partialUpdate();
 }
 
-
 void Page::drawBilge(int idx) {
     if (idx < 0 || idx >= bilgeCount) return;
     // Always draw the outer circle
@@ -168,57 +182,127 @@ void Page::drawBilge(int idx) {
     display.partialUpdate();
 }
 
-void Page::updateTemp() {
-    display.fillRect(temp_text_x, temp_text_y - 30, 100, 40, WHITE);
-    display.setFont(&FreeSans18pt7b);
-    display.setTextColor(BLACK, WHITE);
-    display.setCursor(temp_text_x, temp_text_y);
-    display.print(String(tempValue, 1) + " °C");
-    display.partialUpdate();
-}
-
-void Page::updateHum() {
-    display.fillRect(hum_text_x, hum_text_y - 30, 100, 40, WHITE);
-    display.setFont(&FreeSans18pt7b);
-    display.setTextColor(BLACK, WHITE);
-    display.setCursor(hum_text_x, hum_text_y);
-    display.print(String(humValue, 1) + " %");
-    display.partialUpdate();
-}
 
 void Page::updateBat() {
-    display.fillRect(bat_text_x, bat_text_y - 30, 100, 3 * bat_line + 40, WHITE);
+    display.fillRect(bat_text_x, bat_text_y - 30, 100, 3 * next_line + next_line, WHITE);
     display.setFont(&FreeSans18pt7b);
     display.setTextColor(BLACK, WHITE);
     display.setCursor(bat_text_x, bat_text_y);
     display.print(String(batValue1, 1) + " V");
-    display.setCursor(bat_text_x, bat_text_y + bat_line);
+    display.setCursor(bat_text_x, bat_text_y + next_line);
     display.print(String(batValue2, 1) + " V");
-    display.setCursor(bat_text_x, bat_text_y + 2 * bat_line);
+    display.setCursor(bat_text_x, bat_text_y + 2 * next_line);
     display.print(String(batValue3, 1) + " V");
     display.partialUpdate();
 }
 
-void Page::updateAirPressure() {
-    display.fillRect(air_text_x, air_text_y - 30, 200, 40, WHITE);
+void Page::updateOutTemp() {
+    const int x = temp_text_x;
+    const int outY = temp_text_y - next_line; // baseline used in draw()
+    const int w = 140;
+    const int h = 28; // height of clear box
+    const int clearY = outY - h; // small top margin
+
+    display.fillRect(x, clearY, w, h, WHITE);
     display.setFont(&FreeSans18pt7b);
     display.setTextColor(BLACK, WHITE);
-    display.setCursor(air_text_x, air_text_y);
-    display.print(String(airPressureValue, 1) + " hPa");
+    display.setCursor(x, outY);
+    display.print(String(outTempValue, 1) + " Out");
+    display.partialUpdate();
+}
+
+void Page::updateTemp() {
+    const int x = temp_text_x;
+    const int outY = temp_text_y;
+    const int w = 140;
+    const int h = 28;
+    const int clearY = outY - h;
+
+    display.fillRect(x, clearY, w, h, WHITE);
+    display.setFont(&FreeSans18pt7b);
+    display.setTextColor(BLACK, WHITE);
+    display.setCursor(x, outY);
+    display.print(String(tempValue, 1) + " In");
     display.partialUpdate();
 }
 
 void Page::updateSeaTemp() {
-    display.fillRect(temp_text_x, sea_text_y - 30, 120, 40, WHITE);
+    const int x = temp_text_x;
+    const int outY = sea_text_y;
+    const int w = 160;
+    const int h = 28;
+    const int clearY = outY - h;
+
+    display.fillRect(x, clearY, w, h, WHITE);
     display.setFont(&FreeSans18pt7b);
     display.setTextColor(BLACK, WHITE);
-    display.setCursor(temp_text_x, sea_text_y);
-    display.print(String(seaTempValue, 1) + " sea");
+    display.setCursor(x, outY);
+    display.print(String(seaTempValue, 1) + " Sea");
+    display.partialUpdate();
+}
+
+void Page::updateOutHum() {
+    const int x = hum_text_x;
+    const int outY = hum_text_y - next_line;
+    const int w = 100;
+    const int h = 28;
+    const int clearY = outY - h;
+
+    display.fillRect(x, clearY, w, h, WHITE);
+    display.setFont(&FreeSans18pt7b);
+    display.setTextColor(BLACK, WHITE);
+    display.setCursor(x, outY);
+    display.print(String(outHumValue, 1) + " %");
+    display.partialUpdate();
+}
+
+void Page::updateHum() {
+    const int x = hum_text_x;
+    const int outY = hum_text_y;
+    const int w = 100;
+    const int h = 28;
+    const int clearY = outY - h;
+
+    display.fillRect(x, clearY, w, h, WHITE);
+    display.setFont(&FreeSans18pt7b);
+    display.setTextColor(BLACK, WHITE);
+    display.setCursor(x, outY);
+    display.print(String(humValue, 1) + " %");
+    display.partialUpdate();
+}
+
+void Page::updateOutPres() {
+    const int x = air_text_x;
+    const int outY = air_text_y - next_line;
+    const int w = 260;
+    const int h = 28;
+    const int clearY = outY - h;
+
+    display.fillRect(x, clearY, w, h, WHITE);
+    display.setFont(&FreeSans18pt7b);
+    display.setTextColor(BLACK, WHITE);
+    display.setCursor(x, outY);
+    display.print(String(outPresValue, 0) + " hPa");
+    display.partialUpdate();
+}
+
+void Page::updateAirPressure() {
+    const int x = air_text_x;
+    const int outY = air_text_y;
+    const int w = 260;
+    const int h = 28;
+    const int clearY = outY - h;
+
+    display.fillRect(x, clearY, w, h, WHITE);
+    display.setFont(&FreeSans18pt7b);
+    display.setTextColor(BLACK, WHITE);
+    display.setCursor(x, outY);
+    display.print(String(airPressureValue, 0) + " hPa");
     display.partialUpdate();
 }
 
 void Page::updateGateway() {
-    display.fillRect(gw_x, gw_y - 30, 500, 40, WHITE); // clear area
+    display.fillRect(gw_x, gw_y - 30, 500, next_line, WHITE); // clear area
     display.setFont(&FreeSans18pt7b);
     display.setTextColor(BLACK, WHITE);
     display.setCursor(gw_x, gw_y);
