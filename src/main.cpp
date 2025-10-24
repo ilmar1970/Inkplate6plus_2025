@@ -221,7 +221,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
                     if (currentPage == SWITCH_PAGE) {
                         if (on) toggles[i].toggle->draw(true, true);
                         else toggles[i].toggle->clearButtonArea();
-                        display.partialUpdate();
+                        //display.partialUpdate();
                     }
                     goto log_and_return;
                 }
