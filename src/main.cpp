@@ -26,7 +26,6 @@
 #define TOPIC_OUT_ENV "seed/env/outside"
 #define TOPIC_INFO "info/#" // info/victron|history/pumps|tanks/ 
 
-// add near other globals
 static uint32_t lastMqttReconnectAttempt = 0;
 static uint32_t mqttReconnectDelayMs = 1000; // start 1s
 static uint32_t lastRssiLogMs = 0;
@@ -58,6 +57,7 @@ constexpr uint32_t SWITCH_PAGE_TIMEOUT_MS = 30000; // 30 seconds
 int fuelPort = 0, fuelStb = 0, waterPort = 0, waterStb = 0, soc = 0;
 float batValue1 = 0.0, batValue2 = 0.0, batValue3 = 0.0;
 float lastSeaTemp = -1000.0, lastAirTemp = -1000.0, lastHum = -1000.0, lastAirPressure = -1000.0;
+float lastOutTemp = -1000.0, lastOutHum = -1000.0, lastOutAirPressure = -1000.0;
 double airTemp = 0.0, RH = 0.0, AirPressure = 1023.546; // dummy value
 char airTempStr[16], humStr[16], pressureStr[16];
 char gwStr[32] = "-";
@@ -121,12 +121,16 @@ void onWiFiEvent(WiFiEvent_t event) {
 }
 
 void setup_wifi() {
+    Serial.print("Connecting to WiFi ..");
     WiFi.mode(WIFI_STA);
     WiFi.setAutoReconnect(true);
     WiFi.persistent(true);
     WiFi.onEvent(onWiFiEvent);
+    // telporary for roaming between APs:
+    WiFi.setSleep(false);
+    delay(500);
+    // -----
     WiFi.begin(ssid, password);
-    Serial.print("Connecting to WiFi ..");
     uint32_t start = millis();
     // wait a short time, don't block indefinitely
     while (WiFi.status() != WL_CONNECTED && (millis() - start) < 10000) {
@@ -335,16 +339,23 @@ void callback(char* topic, byte* payload, unsigned int length) {
             log_mqtt("JSON parse seed/outside/env failed");
             goto log_and_return;
         }
-        float out_temp = doc["t"];
-        float out_hum  = doc["h"];
-        float out_pres = doc["p"];
-        page.setOutTemp(out_temp);
-        page.setOutHum(out_hum);
-        page.setOutPres(out_pres);
-        if (currentPage == INFO_PAGE) {
-            page.updateOutTemp();
-            page.updateOutHum();
-            page.updateOutPres();
+        float t = doc["t"];
+        float h = doc["h"];
+        float p = doc["p"];
+        if (t != lastOutTemp) {
+            lastOutTemp = t;
+            page.setOutTemp(lastOutTemp);
+            if (currentPage == INFO_PAGE) page.updateOutTemp();
+        }
+        if (h != lastOutHum) {
+            lastOutHum = h;
+            page.setOutHum(lastOutHum);
+            if (currentPage == INFO_PAGE) page.updateOutHum();
+        }
+        if (p != lastOutAirPressure) {
+            lastOutAirPressure = p;
+            page.setOutPres(lastOutAirPressure);
+            if (currentPage == INFO_PAGE) page.updateOutPres();
         }
         goto log_and_return;
     }
@@ -393,7 +404,7 @@ void setupToggleListener(Display::Toggle& toggle, const char* topic) {
         if (millis() < wakeGuardUntilMs) return;
         lastInteractionMs = millis();
         const char* payload = t->state ? "0" : "1";
-        bool ok = client.publish(topic, payload, false);
+        bool ok = client.publish(topic, payload, true);
         String s = String("CMD [") + topic + "] => " + payload + (ok ? "" : " (fail)");
         log_mqtt(s.c_str());
         // Immediately clear the button area (show pending)
