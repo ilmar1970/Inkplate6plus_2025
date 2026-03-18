@@ -4,7 +4,7 @@
 #include "Display.h"
 #include <Inkplate.h>         // Inkplate library
 #include "Page.h" 
-#include <Adafruit_HDC302x.h>
+#include <Adafruit_BME280.h>
 #include <ArduinoJson.h>
 
 
@@ -26,6 +26,7 @@
 #define TOPIC_OUT_ENV "seed/env/outside"
 #define TOPIC_INFO "info/#" // info/victron|history/pumps|tanks/ 
 
+bool bme_ok = false;
 static uint32_t lastMqttReconnectAttempt = 0;
 static uint32_t mqttReconnectDelayMs = 1000; // start 1s
 static uint32_t lastRssiLogMs = 0;
@@ -71,7 +72,7 @@ Display::Toggle cell_toggle("Cell", TOPIC_CELL, {100, 375});
 Display::Toggle b_light("B_Light", TOPIC_B_LIGHT, {100, 500});
 Display::Toggle ac_port_toggle("AC_Fl_Port", TOPIC_AC_PORT, {100, 625});
 
-Display::Toggle deck_wash("DeckFresh", TOPIC_DECKWASH, {600, 125});
+Display::Toggle deck_wash("DeckFr/Salt", TOPIC_DECKWASH, {600, 125});
 Display::Toggle arlo_toggle("Arlo", TOPIC_ARLO, {600, 250});
 Display::Toggle fridge_fan("FridgeFan", TOPIC_FRIDGEFAN, {600, 375});
 Display::Toggle b_fan("B_Fan", TOPIC_B_FAN, {600, 500});
@@ -102,7 +103,7 @@ constexpr int numToggles = sizeof(toggles) / sizeof(toggles[0]);
 
 WiFiClient espClient;
 PubSubClient client(espClient);
-Adafruit_HDC302x hdc = Adafruit_HDC302x();
+Adafruit_BME280 bme;
 
 void log_mqtt(const String& msg, bool error=false) {
     if (error) {
@@ -474,7 +475,17 @@ inline bool same_1dp(double a, double b) {
 }
 
 void getEnv() {
-    hdc.readTemperatureHumidityOnDemand(airTemp, RH, TRIGGERMODE_LP0);
+    if (!bme_ok) {
+        bme_ok = bme.begin(0x76) || bme.begin(0x77);
+        log_mqtt("BME280 not ok");
+        delay(200);
+    }
+    float T=NAN, H=NAN, P=NAN;
+    if (bme_ok) {
+        airTemp = bme.readTemperature();
+        AirPressure = bme.readPressure()/100.0F;
+        RH = bme.readHumidity();
+    }
     airTemp = round_1dp(airTemp);
     RH = round_1dp(RH);
     AirPressure = round_1dp(AirPressure);
@@ -504,15 +515,16 @@ void getEnv() {
 
 void setup() {
     Serial.begin(115200);
+    bme_ok = bme.begin(0x76) || bme.begin(0x77);
     initDisplay();
     setup_wifi();
     client.setServer(mqtt_server, mqtt_port);
     client.setKeepAlive(60);
     client.setCallback(callback);
-    if (! hdc.begin(0x46, &Wire)) {
-        Serial.println("Could not find sensor?");
-        while (1);
-    }
+    // if (! hdc.begin(0x46, &Wire)) {
+    //     Serial.println("Could not find sensor?");
+    //     while (1);
+    // }
     delay(500);
     for (int i = 0; i < numToggles; ++i) toggles[i].active = true;
     InfoPage();
