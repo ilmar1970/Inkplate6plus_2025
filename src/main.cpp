@@ -62,6 +62,7 @@ float lastOutTemp = -1000.0, lastOutHum = -1000.0, lastOutAirPressure = -1000.0;
 double airTemp = 0.0, RH = 0.0, AirPressure = 1023.546; // dummy value
 char airTempStr[16], humStr[16], pressureStr[16];
 char gwStr[32] = "-";
+char awsStr[32] = "-";
 
 Inkplate display(INKPLATE_1BIT);
 Page page(display);
@@ -326,7 +327,16 @@ void callback(char* topic, byte* payload, unsigned int length) {
     if (strcmp(topic, "info/router/gateway") == 0) {
         strncpy(gwStr, buf, sizeof(gwStr) - 1);
         gwStr[sizeof(gwStr) - 1] = '\0';
-        page.setGateway(gwStr); // see step 3
+        page.setGateway(gwStr);
+        if (currentPage == INFO_PAGE) page.updateGateway();
+        goto log_and_return;
+    }
+
+    // --- Handle AWS ---
+    if (strcmp(topic, "info/nodered/aws") == 0) {
+        strncpy(awsStr, buf, sizeof(awsStr) - 1);
+        awsStr[sizeof(awsStr) - 1] = '\0';
+        page.setAws(awsStr);
         if (currentPage == INFO_PAGE) page.updateGateway();
         goto log_and_return;
     }
@@ -599,6 +609,5 @@ void loop() {
         }
     }
 }
-
 
 

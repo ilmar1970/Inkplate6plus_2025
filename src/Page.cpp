@@ -9,7 +9,7 @@ constexpr int temp_icon_x = 275, temp_icon_y = 550;
 constexpr int hum_icon_x  = 535, hum_icon_y  = 550;
 constexpr int air_icon_x  = 760, air_icon_y  = 550;
 constexpr int icon_w = 60, icon_h = 60;
-constexpr int gw_x = 350; 
+constexpr int gw_x = 150; 
 constexpr int gw_y = 710;
 
 // --- Text positions (relative to icons) ---
@@ -137,6 +137,8 @@ void Page::draw() {
     display.setCursor(gw_x, gw_y);
     display.print("GW: ");
     display.print(gatewayStr);
+    display.print("  AWS: ");
+    display.print(awsStr);
 }
 
 void Page::drawTank(int idx) {
@@ -301,11 +303,14 @@ void Page::updateAirPressure() {
 }
 
 void Page::updateGateway() {
-    display.fillRect(gw_x, gw_y - 30, 500, next_line, WHITE); // clear area
+    display.fillRect(gw_x, gw_y - 30, 750, next_line, WHITE); // clear area
     display.setFont(&FreeSans18pt7b);
     display.setTextColor(BLACK, WHITE);
     display.setCursor(gw_x, gw_y);
     display.print("GW: ");
     display.print(gatewayStr);
+    display.print("      WIND: ");
+    display.print(awsStr);
+    display.print(" knots");
     display.partialUpdate();
 }

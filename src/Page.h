@@ -61,7 +61,9 @@ public:
     float outPresValue = 0000.0;
 
     char gatewayStr[32] = "-";
+    char awsStr[32] = "-";
     void setGateway(const char* gw) { strncpy(gatewayStr, gw, sizeof(gatewayStr) - 1); gatewayStr[sizeof(gatewayStr) - 1] = '\0'; }
+    void setAws(const char* aws) { strncpy(awsStr, aws, sizeof(awsStr) - 1); awsStr[sizeof(awsStr) - 1] = '\0'; }
 
 private:
     Inkplate& display;
