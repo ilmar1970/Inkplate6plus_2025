@@ -27,6 +27,7 @@
 #define TOPIC_INFO "info/#" // info/victron|history/pumps|tanks/ 
 
 bool bme_ok = false;
+bool debug = false;
 static uint32_t lastMqttReconnectAttempt = 0;
 static uint32_t mqttReconnectDelayMs = 1000; // start 1s
 static uint32_t lastRssiLogMs = 0;
@@ -341,6 +342,10 @@ void callback(char* topic, byte* payload, unsigned int length) {
         goto log_and_return;
     }
 
+    if (strcmp(topic, "info/debug") == 0) {
+        debug = (strcmp(buf, "1") == 0);
+        goto log_and_return;
+    }
 
     // inside your callback(char* topic, byte* payload, unsigned int length)
     if (strcmp(topic, TOPIC_OUT_ENV) == 0) {
@@ -373,9 +378,12 @@ void callback(char* topic, byte* payload, unsigned int length) {
 
     // --- Log ---
     log_and_return:
-    char logEntry[128];
-    snprintf(logEntry, sizeof(logEntry), "STATE [%s] <= %.*s", topic, length, payload);
-    log_mqtt(logEntry);
+    if (debug) {
+         Serial.printf("MQTT => topic='%s' payload='%s' len=%u\n", topic, buf, (unsigned)length);
+        char logEntry[128];
+        snprintf(logEntry, sizeof(logEntry), "STATE [%s] <= %.*s", topic, length, payload);
+        log_mqtt(logEntry);
+    }
 }
 
 void initDisplay() {
